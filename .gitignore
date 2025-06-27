@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -90,13 +93,6 @@ jspm_packages/
 .cache
 .parcel-cache
 
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
 # Storybook build outputs
 .out
 .storybook-out
@@ -132,13 +128,6 @@ temp/
 build/
 dist/
 out/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Package manager files
 package-lock.json
