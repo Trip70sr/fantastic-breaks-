@@ -40,7 +40,6 @@ export default function EmployeeBreakDashboard() {
     showOvertimeAlerts: false,
   })
   const [isEmailSharingOpen, setIsEmailSharingOpen] = useState(false)
-  const [breakAlerts, setBreakAlerts] = useState<any[]>([])
 
   // Load employees from localStorage or use initial data
   useEffect(() => {
@@ -91,7 +90,6 @@ export default function EmployeeBreakDashboard() {
   }
 
   const handleDeleteEmployee = (id: string) => {
-    const employee = employees.find((emp) => emp.id === id)
     setEmployees(employees.filter((employee) => employee.id !== id))
     // Also remove any break entries associated with this employee
     setBreakEntries(breakEntries.filter((entry) => entry.employeeId !== id && entry.coverageEmployeeId !== id))
@@ -181,64 +179,6 @@ export default function EmployeeBreakDashboard() {
     return "full-coverage"
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "no-breaks":
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <XCircle className="h-3 w-3" />
-            No Breaks
-          </Badge>
-        )
-      case "partial-breaks":
-        return (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Partial
-          </Badge>
-        )
-      case "all-breaks":
-        return (
-          <Badge variant="default" className="flex items-center gap-1 bg-green-600">
-            <CheckCircle className="h-3 w-3" />
-            Complete
-          </Badge>
-        )
-      case "break1-only":
-        return (
-          <Badge variant="default" className="flex items-center gap-1 bg-blue-600">
-            <CheckCircle className="h-3 w-3" />
-            Break Given
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">Unknown</Badge>
-    }
-  }
-
-  const getCoverageBadge = (status: string) => {
-    switch (status) {
-      case "no-coverage-needed":
-        return <Badge variant="outline">N/A</Badge>
-      case "missing-coverage":
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Missing
-          </Badge>
-        )
-      case "full-coverage":
-        return (
-          <Badge variant="default" className="flex items-center gap-1 bg-green-600">
-            <CheckCircle className="h-3 w-3" />
-            Covered
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">Unknown</Badge>
-    }
-  }
-
   const workingEmployees = getWorkingEmployees(selectedDate)
   const detailedWorkingEmployees = getDetailedWorkingEmployees()
 
@@ -324,47 +264,17 @@ export default function EmployeeBreakDashboard() {
     handleUpdateBreakEntry(updatedEntry)
   }
 
-  const handleFilterEmployeeChange = (value: string) => {
-    setFilterEmployee(value)
-  }
-
-  const handleFilterDepartmentChange = (value: Department | "all") => {
-    setFilterDepartment(value)
-  }
-
-  const handleFilterBreakStatusChange = (value: string) => {
-    setFilterBreakStatus(value)
-  }
-
-  const handleDateChange = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date)
-    }
-  }
-
-  const handleEmployeeManagementOpen = () => {
-    setIsEmployeeManagementOpen(true)
-  }
-
-  const handleBackupRestoreOpen = () => {
-    setIsBackupRestoreOpen(true)
-  }
-
-  const handleEmailSharingOpen = () => {
-    setIsEmailSharingOpen(true)
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Employee Break Management</h2>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleEmployeeManagementOpen}>
+          <Button variant="outline" onClick={() => setIsEmployeeManagementOpen(true)}>
             Manage Employees
           </Button>
           <Button
             variant="outline"
-            onClick={handleBackupRestoreOpen}
+            onClick={() => setIsBackupRestoreOpen(true)}
             className="flex items-center gap-2 bg-transparent"
           >
             <Database className="h-4 w-4" />
@@ -374,7 +284,11 @@ export default function EmployeeBreakDashboard() {
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
-          <Button variant="outline" onClick={handleEmailSharingOpen} className="flex items-center gap-2 bg-transparent">
+          <Button
+            variant="outline"
+            onClick={() => setIsEmailSharingOpen(true)}
+            className="flex items-center gap-2 bg-transparent"
+          >
             <Mail className="h-4 w-4" />
             Share App
           </Button>
@@ -397,7 +311,12 @@ export default function EmployeeBreakDashboard() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={selectedDate} onSelect={handleDateChange} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </div>
@@ -406,7 +325,7 @@ export default function EmployeeBreakDashboard() {
               <Label htmlFor="department">Department</Label>
               <Select
                 value={filterDepartment}
-                onValueChange={handleFilterDepartmentChange}
+                onValueChange={(value) => setFilterDepartment(value as Department | "all")}
                 disabled={managementFilters.showAllDepartments}
               >
                 <SelectTrigger id="department">
@@ -424,7 +343,7 @@ export default function EmployeeBreakDashboard() {
 
             <div className="space-y-2">
               <Label htmlFor="employee">Employee</Label>
-              <Select value={filterEmployee} onValueChange={handleFilterEmployeeChange}>
+              <Select value={filterEmployee} onValueChange={setFilterEmployee}>
                 <SelectTrigger id="employee">
                   <SelectValue placeholder="Select employee" />
                 </SelectTrigger>
@@ -449,7 +368,7 @@ export default function EmployeeBreakDashboard() {
 
             <div className="space-y-2">
               <Label htmlFor="breakStatus">Break Status</Label>
-              <Select value={filterBreakStatus} onValueChange={handleFilterBreakStatusChange}>
+              <Select value={filterBreakStatus} onValueChange={setFilterBreakStatus}>
                 <SelectTrigger id="breakStatus">
                   <SelectValue placeholder="Select break status" />
                 </SelectTrigger>
@@ -564,6 +483,7 @@ export default function EmployeeBreakDashboard() {
   )
 }
 
+// Working Employees Table Component
 interface WorkingEmployeesTableProps {
   detailedEmployees: any[]
   onQuickAddBreak: (employeeId: string, breakType: "break1" | "break2") => void
@@ -781,6 +701,7 @@ function WorkingEmployeesTable({ detailedEmployees, onQuickAddBreak }: WorkingEm
   )
 }
 
+// Break Entry Form Component
 interface BreakEntryFormProps {
   employees: Employee[]
   workingEmployees: Employee[]
