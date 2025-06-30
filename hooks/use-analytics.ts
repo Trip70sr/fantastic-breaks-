@@ -193,3 +193,15 @@ export function useSessionTracking() {
     }
   }, [analytics])
 }
+
+/**
+ * Alias hook for backwards-compatibility.
+ * Components that only need automatic page-view tracking can
+ * keep importing usePageAnalytics() without refactoring.
+ */
+export function usePageAnalytics() {
+  // The call below already tracks page-views via its own useEffect.
+  // We don’t need the returned helpers, so we intentionally ignore them.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _unused = useAnalytics()
+}
