@@ -2,21 +2,19 @@
  * Google Analytics helper for the Employee Break Protocol App
  * -----------------------------------------------------------
  *  • Works in both development and production
- *  • Queues calls until Google’s real gtag.js loads
+ *  • Queues calls until Google's real gtag.js loads
  *  • Respects an explicit user-consent flag stored in localStorage
  */
 
 declare global {
   // Let TypeScript know these globals will exist in the browser
-  // (the real definitions live in types/gtag.d.ts, but keeping this
-  // here prevents errors inside this file when it's compiled alone)
   // eslint-disable-next-line no-var, @typescript-eslint/no-explicit-any
   var dataLayer: any[] | undefined
   // eslint-disable-next-line @typescript-eslint/ban-types
   var gtag: Function | undefined
 }
 
-const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
+export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
 
 /* ------------------------------------------------------------------ */
 /*  ⚙️  SAFETY LAYER – make sure window.gtag always exists            */
@@ -67,7 +65,7 @@ export function initGA(): void {
     anonymize_ip: true,
     allow_google_signals: false,
     allow_ad_personalization_signals: false,
-    send_page_view: false, // we’ll send manually
+    send_page_view: false, // we'll send manually
     cookie_flags: "SameSite=Strict;Secure",
   })
 
@@ -99,7 +97,7 @@ export const pageview = (url: string): void => {
 }
 
 // ──────────────────────────────────────────────────────────
-//  📊  GENERIC EVENT TRACKING  (was `trackEvent` → now `event`)
+//  📊  GENERIC EVENT TRACKING
 // ──────────────────────────────────────────────────────────
 export const event = ({
   action,
@@ -127,20 +125,22 @@ export const event = ({
 /* ------------------------------------------------------------------ */
 
 // Employee management actions
-export const trackEmployeeAction = (action: "add" | "edit" | "delete"): void =>
+export const trackEmployeeAction = (action: "add" | "edit" | "delete" | "import", count?: number): void =>
   event({
     action: `employee_${action}`,
     category: "Employee Management",
+    label: count ? `count_${count}` : undefined,
+    value: count,
   })
 
 // Break scheduling actions
-export const trackBreakAction = (action: "schedule" | "modify" | "cancel"): void =>
+export const trackBreakAction = (action: "schedule" | "modify" | "cancel" | "assign_coverage"): void =>
   event({
     action: `break_${action}`,
     category: "Break Management",
   })
 
-// Data-management actions (exported for useDataAnalytics hook)
+// Data-management actions
 export const trackDataAction = (action: "export" | "backup" | "restore" | "import", format?: string): void =>
   event({
     action: `data_${action}`,
@@ -148,14 +148,14 @@ export const trackDataAction = (action: "export" | "backup" | "restore" | "impor
     label: format,
   })
 
-// Sharing / collaboration actions (exported for useSharingAnalytics hook)
+// Sharing / collaboration actions
 export const trackSharingAction = (action: "email_sent" | "link_created" | "access_granted" | "shared_view"): void =>
   event({
     action,
     category: "Sharing & Collaboration",
   })
 
-// UI interaction actions (exported for generic UI tracking)
+// UI interaction actions
 export const trackUIAction = (action: string, component: string): void =>
   event({
     action,
@@ -163,7 +163,7 @@ export const trackUIAction = (action: string, component: string): void =>
     label: component,
   })
 
-// Performance / timing metrics (exported for usePerformanceTracking hook)
+// Performance / timing metrics
 export const trackTiming = (name: string, value: number, category = "Performance"): void =>
   event({
     action: "timing_complete",
@@ -181,7 +181,7 @@ export const trackEngagement = (feature: string, durationMs?: number): void =>
     value: durationMs ? Math.round(durationMs / 1000) : undefined, // value in seconds
   })
 
-// Search & filter actions (exported for useSearchAnalytics hook)
+// Search & filter actions
 export const trackSearch = (searchType: string, resultsCount?: number): void =>
   event({
     action: "search",
@@ -193,12 +193,12 @@ export const trackSearch = (searchType: string, resultsCount?: number): void =>
 /* ------------------------------------------------------------------ */
 /*  🛑  ERROR & EXCEPTION TRACKING                                    */
 /* ------------------------------------------------------------------ */
-export const trackError = (message: string, fatal = false): void => {
+export const trackError = (message: string, context?: string, fatal = false): void => {
   if (!isAnalyticsEnabled()) return
   ensureGtag()
 
   window.gtag("event", "exception", {
-    description: message,
+    description: `${context ? `${context}: ` : ""}${message}`,
     fatal,
   })
 }

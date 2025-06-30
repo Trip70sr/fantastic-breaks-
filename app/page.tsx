@@ -36,13 +36,13 @@ export default function Home() {
       </header>
       <main className="container mx-auto py-6 px-4">
         <EmployeeBreakDashboard />
+        {showPrivacyBanner && <PrivacyBanner onAccept={handlePrivacyAccept} onDecline={handlePrivacyDecline} />}
       </main>
       <footer className="bg-gray-100 py-4 px-6 border-t">
         <div className="container mx-auto text-center text-sm text-gray-500">
           &copy; {new Date().getFullYear()} Trip-tech.art
         </div>
       </footer>
-      {showPrivacyBanner && <PrivacyBanner onAccept={handlePrivacyAccept} onDecline={handlePrivacyDecline} />}
     </div>
   )
 }
