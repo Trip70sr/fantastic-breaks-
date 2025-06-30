@@ -1,27 +1,27 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable static export for GitHub Pages
   output: 'export',
-  trailingSlash: true,
+  
+  // Disable image optimization for static export
   images: {
     unoptimized: true,
   },
+  
+  // Set base path for GitHub Pages (replace 'fantastic-breaks' with your repo name)
   basePath: '/fantastic-breaks',
   assetPrefix: '/fantastic-breaks/',
-  experimental: {
-    // Enable experimental features if needed
-  },
+  
   // Enable strict mode for better development experience
   reactStrictMode: true,
   
   // Optimize for production
   swcMinify: true,
   
-  // Environment variables that should be available on the client side
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
+  // Disable server-side features for static export
+  trailingSlash: true,
   
-  // Headers for security
+  // Headers for security (won't work with static export but good for reference)
   async headers() {
     return [
       {

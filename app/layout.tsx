@@ -9,9 +9,9 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Employee Break Protocol App",
-  description: "Comprehensive employee break management system for healthcare and service organizations",
-  keywords: "employee management, break scheduling, healthcare, coverage tracking",
-  authors: [{ name: "Trip-tech.art" }],
+  description: "Manage employee breaks and schedules efficiently",
+  keywords: "employee, breaks, scheduling, management, protocol",
+  authors: [{ name: "Your Company" }],
   viewport: "width=device-width, initial-scale=1",
     generator: 'v0.dev'
 }
@@ -23,11 +23,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <GoogleAnalytics />
+      </head>
       <body className={inter.className}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <GoogleAnalytics />
-          {children}
-        </Suspense>
+        <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
       </body>
     </html>
   )

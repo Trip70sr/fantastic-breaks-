@@ -1,89 +1,61 @@
 "use client"
 
 import { useEffect } from "react"
-import { usePathname } from "next/navigation"
-import {
-  trackPageView,
-  trackEvent,
-  trackEmployeeAction,
-  trackBreakAction,
-  trackDataAction,
-  trackSharingAction,
-  trackError,
-  trackEngagement,
-  isAnalyticsEnabled,
-} from "@/lib/gtag"
+import { usePathname, useSearchParams } from "next/navigation"
+import { pageview, event, trackEvent, trackTiming } from "@/lib/gtag"
 
-// Main analytics hook
-export const useAnalytics = () => {
+export function useAnalytics() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    if (isAnalyticsEnabled()) {
-      trackPageView(window.location.href)
+    if (pathname) {
+      pageview(pathname)
     }
-  }, [pathname])
+  }, [pathname, searchParams])
+
+  const trackUserAction = (action: string, category: string, label?: string) => {
+    event({ action, category, label })
+  }
+
+  const trackFeatureUsage = (featureName: string, details?: Record<string, any>) => {
+    trackEvent("feature_used", {
+      feature_name: featureName,
+      ...details,
+    })
+  }
+
+  const trackEmployeeAction = (action: string, details?: Record<string, any>) => {
+    trackEvent("employee_action", {
+      action_type: action,
+      ...details,
+    })
+  }
+
+  const trackDataOperation = (operation: string, details?: Record<string, any>) => {
+    trackEvent("data_operation", {
+      operation_type: operation,
+      ...details,
+    })
+  }
+
+  const trackError = (error: string, context?: string) => {
+    trackError(`${context ? `${context}: ` : ""}${error}`)
+  }
+
+  const trackPerformance = (metric: string, value: number) => {
+    trackTiming(metric, value, "Performance")
+  }
 
   return {
-    trackEvent,
+    trackUserAction,
+    trackFeatureUsage,
     trackEmployeeAction,
-    trackBreakAction,
-    trackDataAction,
-    trackSharingAction,
+    trackDataOperation,
     trackError,
-    trackEngagement,
-    isEnabled: isAnalyticsEnabled(),
+    trackPerformance,
   }
 }
 
-// Page analytics hook (for backward compatibility)
-export const usePageAnalytics = () => {
-  return useAnalytics()
-}
-
-// Employee management analytics
-export const useEmployeeAnalytics = () => {
-  const { trackEmployeeAction, trackError } = useAnalytics()
-
-  return {
-    trackAdd: (department?: string) => trackEmployeeAction("add", department),
-    trackEdit: (department?: string) => trackEmployeeAction("edit", department),
-    trackDelete: (department?: string) => trackEmployeeAction("delete", department),
-    trackError: (error: string) => trackError(error, "employee_management"),
-  }
-}
-
-// Break management analytics
-export const useBreakAnalytics = () => {
-  const { trackBreakAction, trackError } = useAnalytics()
-
-  return {
-    trackSchedule: () => trackBreakAction("schedule"),
-    trackModify: () => trackBreakAction("modify"),
-    trackDelete: () => trackBreakAction("delete"),
-    trackError: (error: string) => trackError(error, "break_management"),
-  }
-}
-
-// Data management analytics
-export const useDataAnalytics = () => {
-  const { trackDataAction, trackError } = useAnalytics()
-
-  return {
-    trackExport: (format: string) => trackDataAction("export", format),
-    trackBackup: () => trackDataAction("backup"),
-    trackRestore: () => trackDataAction("restore"),
-    trackError: (error: string) => trackError(error, "data_management"),
-  }
-}
-
-// Sharing analytics
-export const useSharingAnalytics = () => {
-  const { trackSharingAction, trackError } = useAnalytics()
-
-  return {
-    trackEmailSent: () => trackSharingAction("email_sent"),
-    trackLinkGenerated: () => trackSharingAction("link_generated"),
-    trackError: (error: string) => trackError(error, "app_sharing"),
-  }
-}
+// Legacy export for backward compatibility
+export const usePageAnalytics = useAnalytics

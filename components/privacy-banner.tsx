@@ -1,16 +1,39 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { X, Shield, Eye, Clock, Database } from "lucide-react"
 
-interface PrivacyBannerProps {
-  onConsent: (accepted: boolean) => void
-}
-
-export default function PrivacyBanner({ onConsent }: PrivacyBannerProps) {
+export default function PrivacyBanner() {
+  const [showBanner, setShowBanner] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+
+  useEffect(() => {
+    const consent = localStorage.getItem("analytics-consent")
+    if (!consent) {
+      setShowBanner(true)
+    }
+  }, [])
+
+  const handleAccept = () => {
+    localStorage.setItem("analytics-consent", "accepted")
+    setShowBanner(false)
+
+    // Update consent for Google Analytics
+    if (typeof window !== "undefined" && window.gtag) {
+      window.gtag("consent", "update", {
+        analytics_storage: "granted",
+      })
+    }
+  }
+
+  const handleDecline = () => {
+    localStorage.setItem("analytics-consent", "declined")
+    setShowBanner(false)
+  }
+
+  if (!showBanner) return null
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-center p-4 z-50">
@@ -21,64 +44,61 @@ export default function PrivacyBanner({ onConsent }: PrivacyBannerProps) {
               <Shield className="h-5 w-5 text-blue-600" />
               <h3 className="text-lg font-semibold">Privacy & Analytics</h3>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => onConsent(false)} className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" onClick={handleDecline} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           <p className="text-sm text-muted-foreground mb-4">
-            We use Google Analytics to understand how you use our Employee Break Protocol App. Your privacy is important
-            to us - no personal employee data is tracked.
+            We use Google Analytics to understand how you use our Employee Break Protocol app. This helps us improve the
+            experience for everyone.
           </p>
 
           {showDetails && (
-            <div className="space-y-4 mb-4 p-4 bg-muted/50 rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-start gap-2">
-                  <Eye className="h-4 w-4 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-green-700">What we track:</p>
-                    <ul className="text-muted-foreground mt-1 space-y-1">
-                      <li>• Page views and navigation</li>
-                      <li>• Feature usage patterns</li>
-                      <li>• Error occurrences (anonymized)</li>
-                      <li>• App performance metrics</li>
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <Shield className="h-4 w-4 text-red-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-red-700">What we DON'T track:</p>
-                    <ul className="text-muted-foreground mt-1 space-y-1">
-                      <li>• Employee names or personal data</li>
-                      <li>• Specific break times or schedules</li>
-                      <li>• Sensitive business information</li>
-                      <li>• Cross-site browsing activity</li>
-                    </ul>
-                  </div>
+            <div className="mb-4 p-4 bg-muted rounded-lg text-sm space-y-3">
+              <div className="flex items-start gap-2">
+                <Eye className="h-4 w-4 mt-0.5 text-blue-600" />
+                <div>
+                  <strong>What we track:</strong>
+                  <ul className="mt-1 text-muted-foreground list-disc list-inside ml-2">
+                    <li>Page views and navigation patterns</li>
+                    <li>Feature usage (anonymized)</li>
+                    <li>Error rates for debugging</li>
+                    <li>Performance metrics</li>
+                  </ul>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-2 border-t">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>Data auto-deleted after 2 months</span>
+              <div className="flex items-start gap-2">
+                <Database className="h-4 w-4 mt-0.5 text-green-600" />
+                <div>
+                  <strong>What we DON'T track:</strong>
+                  <ul className="mt-1 text-muted-foreground list-disc list-inside ml-2">
+                    <li>Employee names or personal information</li>
+                    <li>Sensitive business data</li>
+                    <li>Exact break times or schedules</li>
+                    <li>Any personally identifiable information</li>
+                  </ul>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Database className="h-4 w-4" />
-                  <span>IP addresses anonymized</span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Clock className="h-4 w-4 mt-0.5 text-orange-600" />
+                <div>
+                  <strong>Data retention:</strong>
+                  <p className="mt-1 text-muted-foreground">
+                    Analytics data is automatically deleted after 2 months. Your IP address is anonymized immediately.
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={() => onConsent(true)} className="flex-1">
+            <Button onClick={handleAccept} className="flex-1">
               Accept Analytics
             </Button>
-            <Button variant="outline" onClick={() => onConsent(false)} className="flex-1">
+            <Button variant="outline" onClick={handleDecline} className="flex-1 bg-transparent">
               Decline
             </Button>
             <Button variant="ghost" onClick={() => setShowDetails(!showDetails)} className="text-sm">
@@ -87,7 +107,7 @@ export default function PrivacyBanner({ onConsent }: PrivacyBannerProps) {
           </div>
 
           <p className="text-xs text-muted-foreground mt-3 text-center">
-            You can change your preference anytime in your browser settings.
+            You can change your preference anytime by clearing your browser data.
           </p>
         </CardContent>
       </Card>
