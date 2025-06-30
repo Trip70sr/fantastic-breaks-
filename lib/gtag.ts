@@ -1,31 +1,20 @@
-// Google Analytics configuration and helper functions
+export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID
 
-export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
-
-// Check if GA_TRACKING_ID is available
-export const isGAEnabled = GA_TRACKING_ID && GA_TRACKING_ID !== ""
+// Check if Google Analytics is enabled
+export const isGAEnabled = !!GA_TRACKING_ID
 
 // https://developers.google.com/analytics/devguides/collection/gtagjs/pages
-export const pageview = (url: string) => {
+export const trackPageView = (pageName: string) => {
   if (!isGAEnabled) return
 
   window.gtag("config", GA_TRACKING_ID, {
-    page_location: url,
+    page_title: pageName,
+    page_location: window.location.href,
   })
 }
 
 // https://developers.google.com/analytics/devguides/collection/gtagjs/events
-export const event = ({
-  action,
-  category,
-  label,
-  value,
-}: {
-  action: string
-  category: string
-  label?: string
-  value?: number
-}) => {
+export const trackEvent = (action: string, category: string, label?: string, value?: number) => {
   if (!isGAEnabled) return
 
   window.gtag("event", action, {
@@ -35,70 +24,96 @@ export const event = ({
   })
 }
 
-// Custom events for the Employee Break App
+// Employee-specific tracking
 export const trackEmployeeAction = (action: string, employeeName?: string) => {
-  event({
-    action,
-    category: "Employee Management",
-    label: employeeName,
+  if (!isGAEnabled) return
+
+  window.gtag("event", "employee_action", {
+    event_category: "Employee Management",
+    event_label: action,
+    custom_parameter_1: employeeName ? "with_name" : "anonymous",
   })
 }
 
+// Break-specific tracking
 export const trackBreakAction = (action: string, breakType?: string) => {
-  event({
-    action,
-    category: "Break Management",
-    label: breakType,
+  if (!isGAEnabled) return
+
+  window.gtag("event", "break_action", {
+    event_category: "Break Management",
+    event_label: action,
+    break_type: breakType,
   })
 }
 
+// Data management tracking
 export const trackDataAction = (action: string, dataType?: string) => {
-  event({
-    action,
-    category: "Data Management",
-    label: dataType,
+  if (!isGAEnabled) return
+
+  window.gtag("event", "data_action", {
+    event_category: "Data Management",
+    event_label: action,
+    data_type: dataType,
   })
 }
 
+// Sharing tracking
 export const trackShareAction = (action: string, shareType?: string) => {
-  event({
-    action,
-    category: "App Sharing",
-    label: shareType,
+  if (!isGAEnabled) return
+
+  window.gtag("event", "share_action", {
+    event_category: "Sharing",
+    event_label: action,
+    share_type: shareType,
   })
 }
 
+// Export tracking
 export const trackExportAction = (exportType: string, recordCount?: number) => {
-  event({
-    action: "Export Data",
-    category: "Data Export",
-    label: exportType,
+  if (!isGAEnabled) return
+
+  window.gtag("event", "export_action", {
+    event_category: "Data Export",
+    event_label: exportType,
     value: recordCount,
   })
 }
 
-export const trackPageView = (pageName: string) => {
-  event({
-    action: "Page View",
-    category: "Navigation",
-    label: pageName,
-  })
-}
-
+// User engagement tracking
 export const trackUserEngagement = (feature: string, duration?: number) => {
-  event({
-    action: "Feature Usage",
-    category: "User Engagement",
-    label: feature,
-    value: duration,
+  if (!isGAEnabled) return
+
+  window.gtag("event", "user_engagement", {
+    event_category: "User Engagement",
+    event_label: feature,
+    engagement_time_msec: duration,
   })
 }
 
-// Track errors
-export const trackError = (errorMessage: string, errorLocation: string) => {
-  event({
-    action: "Error Occurred",
-    category: "Errors",
-    label: `${errorLocation}: ${errorMessage}`,
+// Error tracking
+export const trackError = (error: string, location: string) => {
+  if (!isGAEnabled) return
+
+  window.gtag("event", "exception", {
+    description: error,
+    fatal: false,
+    custom_parameter_1: location,
+  })
+}
+
+// Consent management
+export const grantConsent = () => {
+  if (!isGAEnabled) return
+
+  window.gtag("consent", "update", {
+    analytics_storage: "granted",
+  })
+}
+
+export const denyConsent = () => {
+  if (!isGAEnabled) return
+
+  window.gtag("consent", "update", {
+    analytics_storage: "denied",
   })
 }
