@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useCallback } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import {
   pageview,
   event,
@@ -20,16 +20,26 @@ import {
 // Main analytics hook
 export const useAnalytics = () => {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
-  // Track page views automatically
   useEffect(() => {
-    if (pathname && isAnalyticsEnabled()) {
-      pageview(pathname)
+    // Check if user has consented to analytics
+    const consent = localStorage.getItem("analytics-consent")
+    if (consent === "accepted") {
+      const url = pathname + searchParams.toString()
+      pageview(url)
     }
-  }, [pathname])
+  }, [pathname, searchParams])
+
+  // Track custom events
+  const trackEvent = useCallback((action: string, category: string, label?: string, value?: number) => {
+    const consent = localStorage.getItem("analytics-consent")
+    if (consent === "accepted") {
+      event(action, category, label, value)
+    }
+  }, [])
 
   // Memoized tracking functions
-  const trackEvent = useCallback(event, [])
   const trackEmployee = useCallback(trackEmployeeAction, [])
   const trackBreak = useCallback(trackBreakAction, [])
   const trackData = useCallback(trackDataAction, [])
@@ -59,9 +69,7 @@ export const useAnalytics = () => {
 }
 
 // Page analytics hook (for backward compatibility)
-export const usePageAnalytics = () => {
-  return useAnalytics()
-}
+export const usePageAnalytics = useAnalytics
 
 // Specialized hooks for different parts of the app
 

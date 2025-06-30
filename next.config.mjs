@@ -1,49 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static export for GitHub Pages
   output: 'export',
-  
-  // Disable image optimization for static export
+  trailingSlash: true,
+  basePath: '/Employee-Breaks',
+  assetPrefix: '/Employee-Breaks/',
   images: {
     unoptimized: true,
   },
-  
-  // Set base path for GitHub Pages (update this to match your repository name)
-  basePath: '/Employee-Breaks',
-  assetPrefix: '/Employee-Breaks/',
-  
-  // Enable strict mode for better development experience
-  reactStrictMode: true,
-  
-  // Optimize for production
-  swcMinify: true,
-  
-  // Disable server-side features for static export
-  trailingSlash: true,
-  
-  // Headers for security (won't work with static export but good for reference)
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-        ],
-      },
-    ]
-  },
-  
   eslint: {
     ignoreDuringBuilds: true,
   },

@@ -1,39 +1,40 @@
 "use client"
 
 import Script from "next/script"
-import { GA_TRACKING_ID, initGA } from "@/lib/gtag"
+
+const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
 
 export default function GoogleAnalytics() {
-  // Don't load analytics if no tracking ID is provided
   if (!GA_TRACKING_ID) {
     return null
   }
 
   return (
     <>
-      {/* Load Google Analytics script */}
       <Script strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`} />
-
-      {/* Initialize Google Analytics */}
       <Script
-        id="google-analytics"
+        id="gtag-init"
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
-            window.gtag = gtag;
             gtag('js', new Date());
+            
+            // Initialize with privacy settings
+            gtag('consent', 'default', {
+              'analytics_storage': 'denied',
+              'ad_storage': 'denied',
+              'ad_user_data': 'denied',
+              'ad_personalization': 'denied'
+            });
+            
+            gtag('config', '${GA_TRACKING_ID}', {
+              anonymize_ip: true,
+              allow_google_signals: false,
+              allow_ad_personalization_signals: false
+            });
           `,
-        }}
-      />
-
-      {/* Initialize GA with privacy settings */}
-      <Script
-        id="ga-init"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `(${initGA.toString()})();`,
         }}
       />
     </>

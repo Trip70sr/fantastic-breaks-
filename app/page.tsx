@@ -17,17 +17,13 @@ export default function Home() {
 
   const handlePrivacyAccept = () => {
     localStorage.setItem("analytics-consent", "accepted")
+    localStorage.setItem("analytics-consent-date", new Date().toISOString())
     setShowPrivacyBanner(false)
-    // Initialize analytics
-    if (typeof window !== "undefined" && window.gtag) {
-      window.gtag("consent", "update", {
-        analytics_storage: "granted",
-      })
-    }
   }
 
   const handlePrivacyDecline = () => {
     localStorage.setItem("analytics-consent", "declined")
+    localStorage.setItem("analytics-consent-date", new Date().toISOString())
     setShowPrivacyBanner(false)
   }
 
