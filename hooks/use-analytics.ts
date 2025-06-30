@@ -1,61 +1,108 @@
 "use client"
 
 import { useEffect } from "react"
-import { usePathname, useSearchParams } from "next/navigation"
-import { pageview, event, trackEvent, trackTiming } from "@/lib/gtag"
+import { usePathname } from "next/navigation"
+import {
+  pageview,
+  event,
+  trackEmployeeAction,
+  trackBreakAction,
+  trackDataAction,
+  trackSharingAction,
+  trackError,
+} from "@/lib/gtag"
 
-export function useAnalytics() {
+// Main analytics hook
+export const useAnalytics = () => {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
+    // Track page view on route change
     if (pathname) {
       pageview(pathname)
     }
-  }, [pathname, searchParams])
-
-  const trackUserAction = (action: string, category: string, label?: string) => {
-    event({ action, category, label })
-  }
-
-  const trackFeatureUsage = (featureName: string, details?: Record<string, any>) => {
-    trackEvent("feature_used", {
-      feature_name: featureName,
-      ...details,
-    })
-  }
-
-  const trackEmployeeAction = (action: string, details?: Record<string, any>) => {
-    trackEvent("employee_action", {
-      action_type: action,
-      ...details,
-    })
-  }
-
-  const trackDataOperation = (operation: string, details?: Record<string, any>) => {
-    trackEvent("data_operation", {
-      operation_type: operation,
-      ...details,
-    })
-  }
-
-  const trackError = (error: string, context?: string) => {
-    trackError(`${context ? `${context}: ` : ""}${error}`)
-  }
-
-  const trackPerformance = (metric: string, value: number) => {
-    trackTiming(metric, value, "Performance")
-  }
+  }, [pathname])
 
   return {
-    trackUserAction,
-    trackFeatureUsage,
-    trackEmployeeAction,
-    trackDataOperation,
-    trackError,
-    trackPerformance,
+    trackEvent: event,
+    trackEmployee: trackEmployeeAction,
+    trackBreak: trackBreakAction,
+    trackData: trackDataAction,
+    trackSharing: trackSharingAction,
+    trackError: trackError,
   }
 }
 
-// Legacy export for backward compatibility
-export const usePageAnalytics = useAnalytics
+// Page analytics hook (for backward compatibility)
+export const usePageAnalytics = () => {
+  return useAnalytics()
+}
+
+// Employee management analytics
+export const useEmployeeAnalytics = () => {
+  const { trackEmployee } = useAnalytics()
+
+  const trackAddEmployee = (department?: string) => {
+    trackEmployee("add", department)
+  }
+
+  const trackEditEmployee = (department?: string) => {
+    trackEmployee("edit", department)
+  }
+
+  const trackDeleteEmployee = (department?: string) => {
+    trackEmployee("delete", department)
+  }
+
+  return {
+    trackAddEmployee,
+    trackEditEmployee,
+    trackDeleteEmployee,
+  }
+}
+
+// Break management analytics
+export const useBreakAnalytics = () => {
+  const { trackBreak } = useAnalytics()
+
+  const trackScheduleBreak = () => {
+    trackBreak("schedule")
+  }
+
+  const trackModifyBreak = () => {
+    trackBreak("modify")
+  }
+
+  const trackCancelBreak = () => {
+    trackBreak("cancel")
+  }
+
+  return {
+    trackScheduleBreak,
+    trackModifyBreak,
+    trackCancelBreak,
+  }
+}
+
+// Data management analytics
+export const useDataAnalytics = () => {
+  const { trackData } = useAnalytics()
+
+  const trackExportData = () => {
+    trackData("export")
+  }
+
+  const trackBackupData = () => {
+    trackData("backup")
+  }
+
+  const trackRestoreData = () => {
+    trackData("restore")
+  }
+
+  return {
+    trackExportData,
+    trackBackupData,
+    trackRestoreData,
+  }
+}
