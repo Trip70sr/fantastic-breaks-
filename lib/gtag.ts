@@ -98,7 +98,10 @@ export const pageview = (url: string): void => {
   window.gtag("config", GA_TRACKING_ID, { page_path: url })
 }
 
-export const trackEvent = ({
+// ──────────────────────────────────────────────────────────
+//  📊  GENERIC EVENT TRACKING  (was `trackEvent` → now `event`)
+// ──────────────────────────────────────────────────────────
+export const event = ({
   action,
   category,
   label,
@@ -123,13 +126,19 @@ export const trackEvent = ({
 /*  🔧  DOMAIN-SPECIFIC HELPERS                                       */
 /* ------------------------------------------------------------------ */
 
-// Example: employee management actions
+// Employee management actions
 export const trackEmployeeAction = (action: "add" | "edit" | "delete"): void =>
-  trackEvent({ action: `employee_${action}`, category: "Employee Management" })
+  event({
+    action: `employee_${action}`,
+    category: "Employee Management",
+  })
 
-// Example: break scheduling actions
+// Break scheduling actions
 export const trackBreakAction = (action: "schedule" | "modify" | "cancel"): void =>
-  trackEvent({ action: `break_${action}`, category: "Break Management" })
+  event({
+    action: `break_${action}`,
+    category: "Break Management",
+  })
 
 /* ------------------------------------------------------------------ */
 /*  🛑  ERROR & EXCEPTION TRACKING                                    */
