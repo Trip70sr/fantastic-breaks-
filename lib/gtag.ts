@@ -1,67 +1,145 @@
-// Ensure gtag is available even before Google Analytics loads
-function ensureGtag() {
-  if (typeof window !== "undefined" && !window.gtag) {
-    window.dataLayer = window.dataLayer || []
-    window.gtag = function gtag() {
-      window.dataLayer.push(arguments)
+/**
+ * Google Analytics helper for the Employee Break Protocol App
+ * -----------------------------------------------------------
+ *  • Works in both development and production
+ *  • Queues calls until Google’s real gtag.js loads
+ *  • Respects an explicit user-consent flag stored in localStorage
+ */
+
+declare global {
+  // Let TypeScript know these globals will exist in the browser
+  // (the real definitions live in types/gtag.d.ts, but keeping this
+  // here prevents errors inside this file when it's compiled alone)
+  // eslint-disable-next-line no-var, @typescript-eslint/no-explicit-any
+  var dataLayer: any[] | undefined
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  var gtag: Function | undefined
+}
+
+const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
+
+/* ------------------------------------------------------------------ */
+/*  ⚙️  SAFETY LAYER – make sure window.gtag always exists            */
+/* ------------------------------------------------------------------ */
+export function ensureGtag(): void {
+  if (typeof window === "undefined") return
+
+  // Ensure the dataLayer array exists (gtag.js uses this)
+  window.dataLayer = window.dataLayer || []
+
+  // Stub window.gtag so we can call it safely before the script loads
+  if (typeof window.gtag !== "function") {
+    window.gtag = function stubGtag(...args: unknown[]) {
+      window.dataLayer!.push(args)
     }
   }
 }
 
-// Initialize gtag immediately
-ensureGtag()
+/* ------------------------------------------------------------------ */
+/*  🔐  CONSENT & ENABLEMENT                                          */
+/* ------------------------------------------------------------------ */
+export const isAnalyticsEnabled = (): boolean => {
+  if (!GA_TRACKING_ID) return false // GA not configured
+  if (typeof window === "undefined") return false // SSR safety
 
-export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
+  const consent = localStorage.getItem("analytics-consent")
+  return consent === "accepted"
+}
 
-// Page view tracking
-export const pageview = (url: string) => {
+/* ------------------------------------------------------------------ */
+/*  🚀  INITIALISATION                                                */
+/* ------------------------------------------------------------------ */
+export function initGA(): void {
   ensureGtag()
-  if (GA_TRACKING_ID && window.gtag) {
-    window.gtag("config", GA_TRACKING_ID, {
-      page_path: url,
-    })
+
+  if (!GA_TRACKING_ID || typeof window === "undefined") return
+
+  // Default all storage to denied (GDPR style) until user opts-in
+  window.gtag("consent", "default", {
+    analytics_storage: "denied",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
+  })
+
+  // Configure GA with strict privacy options
+  window.gtag("config", GA_TRACKING_ID, {
+    anonymize_ip: true,
+    allow_google_signals: false,
+    allow_ad_personalization_signals: false,
+    send_page_view: false, // we’ll send manually
+    cookie_flags: "SameSite=Strict;Secure",
+  })
+
+  // If the user has previously accepted, grant the consent immediately
+  if (isAnalyticsEnabled()) {
+    grantAnalyticsConsent()
   }
 }
 
-// Event tracking
-export const event = (action: string, category: string, label?: string, value?: number) => {
+/* ------------------------------------------------------------------ */
+/*  ✅  GRANT CONSENT                                                 */
+/* ------------------------------------------------------------------ */
+export function grantAnalyticsConsent(): void {
   ensureGtag()
-  if (GA_TRACKING_ID && window.gtag) {
-    window.gtag("event", action, {
-      event_category: category,
-      event_label: label,
-      value: value,
-    })
-  }
+
+  if (!GA_TRACKING_ID || typeof window === "undefined") return
+
+  window.gtag("consent", "update", { analytics_storage: "granted" })
 }
 
-// Grant analytics consent
-export const grantAnalyticsConsent = () => {
+/* ------------------------------------------------------------------ */
+/*  📄  PAGE VIEWS & EVENTS                                           */
+/* ------------------------------------------------------------------ */
+export const pageview = (url: string): void => {
+  if (!isAnalyticsEnabled()) return
   ensureGtag()
-  if (window.gtag) {
-    window.gtag("consent", "update", {
-      analytics_storage: "granted",
-    })
-  }
+
+  window.gtag("config", GA_TRACKING_ID, { page_path: url })
 }
 
-// Initialize Google Analytics with privacy settings
-export const initGA = () => {
+export const trackEvent = ({
+  action,
+  category,
+  label,
+  value,
+}: {
+  action: string
+  category: string
+  label?: string
+  value?: number
+}): void => {
+  if (!isAnalyticsEnabled()) return
   ensureGtag()
-  if (GA_TRACKING_ID && window.gtag) {
-    // Set default consent state
-    window.gtag("consent", "default", {
-      analytics_storage: "denied",
-      ad_storage: "denied",
-      ad_user_data: "denied",
-      ad_personalization: "denied",
-    })
 
-    // Configure GA
-    window.gtag("config", GA_TRACKING_ID, {
-      anonymize_ip: true,
-      allow_google_signals: false,
-      allow_ad_personalization_signals: false,
-    })
-  }
+  window.gtag("event", action, {
+    event_category: category,
+    event_label: label,
+    value,
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/*  🔧  DOMAIN-SPECIFIC HELPERS                                       */
+/* ------------------------------------------------------------------ */
+
+// Example: employee management actions
+export const trackEmployeeAction = (action: "add" | "edit" | "delete"): void =>
+  trackEvent({ action: `employee_${action}`, category: "Employee Management" })
+
+// Example: break scheduling actions
+export const trackBreakAction = (action: "schedule" | "modify" | "cancel"): void =>
+  trackEvent({ action: `break_${action}`, category: "Break Management" })
+
+/* ------------------------------------------------------------------ */
+/*  🛑  ERROR & EXCEPTION TRACKING                                    */
+/* ------------------------------------------------------------------ */
+export const trackError = (message: string, fatal = false): void => {
+  if (!isAnalyticsEnabled()) return
+  ensureGtag()
+
+  window.gtag("event", "exception", {
+    description: message,
+    fatal,
+  })
 }
