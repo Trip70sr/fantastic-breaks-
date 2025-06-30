@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect } from "react"
-import { usePathname, useSearchParams } from "next/navigation"
 import Script from "next/script"
-import { GA_TRACKING_ID, isGAEnabled, pageview } from "@/lib/gtag"
+import { usePathname, useSearchParams } from "next/navigation"
+import { useEffect } from "react"
+import { pageview, isGAEnabled, GA_TRACKING_ID } from "@/lib/gtag"
 
 export default function GoogleAnalytics() {
   const pathname = usePathname()
@@ -16,9 +16,21 @@ export default function GoogleAnalytics() {
     pageview(url)
   }, [pathname, searchParams])
 
-  if (!isGAEnabled) {
-    return null
-  }
+  // Check if user has consented to analytics
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const consent = localStorage.getItem("analytics-consent")
+      if (consent !== "true") {
+        return // Don't load GA if user hasn't consented
+      }
+    }
+  }, [])
+
+  // Don't render anything if GA is not enabled or user hasn't consented
+  if (!isGAEnabled) return null
+
+  const hasConsent = typeof window !== "undefined" && localStorage.getItem("analytics-consent") === "true"
+  if (!hasConsent) return null
 
   return (
     <>
@@ -31,29 +43,43 @@ export default function GoogleAnalytics() {
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
+            
+            // Configure privacy settings
             gtag('config', '${GA_TRACKING_ID}', {
               page_location: window.location.href,
               page_title: document.title,
-              send_page_view: true,
-              // Enhanced measurement settings
-              enhanced_measurement: {
-                scrolls: true,
-                outbound_clicks: true,
-                site_search: true,
-                video_engagement: true,
-                file_downloads: true,
-              },
-              // Custom parameters for the Employee Break App
-              custom_map: {
-                'custom_parameter_1': 'app_version',
-                'custom_parameter_2': 'user_role',
-                'custom_parameter_3': 'department',
-              },
               // Privacy settings
               anonymize_ip: true,
               allow_google_signals: false,
               allow_ad_personalization_signals: false,
+              // Data retention settings
+              storage: 'none',
+              // Custom settings for employee break app
+              custom_map: {
+                'custom_parameter_1': 'app_version',
+                'custom_parameter_2': 'user_type'
+              },
+              // Enhanced privacy mode
+              restricted_data_processing: true
             });
+
+            // Set default consent state
+            gtag('consent', 'default', {
+              'analytics_storage': 'denied',
+              'ad_storage': 'denied',
+              'ad_user_data': 'denied',
+              'ad_personalization': 'denied',
+              'functionality_storage': 'denied',
+              'personalization_storage': 'denied',
+              'security_storage': 'granted'
+            });
+
+            // Update consent when user accepts
+            if (localStorage.getItem('analytics-consent') === 'true') {
+              gtag('consent', 'update', {
+                'analytics_storage': 'granted'
+              });
+            }
           `,
         }}
       />
