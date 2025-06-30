@@ -1,4 +1,5 @@
 import EmployeeBreakDashboard from "@/components/employee-break-dashboard"
+import PrivacyBanner from "@/components/privacy-banner"
 
 export default function Home() {
   return (
@@ -16,6 +17,7 @@ export default function Home() {
           &copy; {new Date().getFullYear()} Trip-tech.art
         </div>
       </footer>
+      <PrivacyBanner />
     </div>
   )
 }

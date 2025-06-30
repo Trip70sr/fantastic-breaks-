@@ -140,11 +140,52 @@ employee-break-app/
 ## 🔧 Configuration
 
 ### Environment Variables
+- `NEXT_PUBLIC_GA_ID`: Google Analytics 4 Measurement ID (e.g., G-XXXXXXXXXX)
 - `SENDGRID_API_KEY`: For email notifications (optional)
 - `FROM_EMAIL`: Sender email address
 - `DIRECTOR_EMAIL`: Recipient for break alerts
 - `NEXTAUTH_SECRET`: Security key for authentication
 - `NEXTAUTH_URL`: Application URL
+
+### Google Analytics Setup
+
+1. **Create Google Analytics 4 Property**
+   - Go to [Google Analytics](https://analytics.google.com/)
+   - Create a new GA4 property
+   - Get your Measurement ID (starts with G-)
+
+2. **Configure Environment Variables**
+   \`\`\`env
+   NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+   \`\`\`
+
+3. **Privacy Compliance**
+   - The app includes a privacy banner for GDPR compliance
+   - Users can opt-in or opt-out of analytics tracking
+   - All data is anonymized and no personal information is collected
+
+4. **What's Tracked**
+   - Page views and navigation patterns
+   - Feature usage (employee management, break scheduling, etc.)
+   - Data export actions
+   - Error occurrences (anonymized)
+   - User engagement metrics
+
+5. **What's NOT Tracked**
+   - Employee names or personal data
+   - Sensitive business information
+   - Login credentials or authentication data
+   - Specific break times or schedules
+
+### Analytics Events
+
+The app tracks the following custom events:
+- **Employee Management**: Add, edit, delete employees
+- **Break Management**: Schedule, modify, delete breaks
+- **Data Management**: Backup, restore, export actions
+- **App Sharing**: Email invitations and access sharing
+- **User Engagement**: Feature usage and time spent
+- **Error Tracking**: Application errors (anonymized)
 
 ### Customization
 - **Departments**: Modify department types in `lib/types.ts`

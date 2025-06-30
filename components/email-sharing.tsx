@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Mail, Send, Users, Shield, Copy, CheckCircle, AlertCircle, Clock } from "lucide-react"
 import type { Employee, BreakEntry } from "@/lib/types"
+import { useAnalytics } from "@/hooks/use-analytics"
 
 interface EmailSharingProps {
   isOpen: boolean
@@ -40,6 +41,7 @@ interface EmailTemplate {
 }
 
 export default function EmailSharing({ isOpen, onClose, employees, breakEntries }: EmailSharingProps) {
+  const analytics = useAnalytics()
   const [recipientEmail, setRecipientEmail] = useState("")
   const [recipientName, setRecipientName] = useState("")
   const [customMessage, setCustomMessage] = useState("")
@@ -179,11 +181,6 @@ Best regards,
       // Simulate email sending
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      // In a real implementation, this would:
-      // 1. Send email via email service (SendGrid, AWS SES, etc.)
-      // 2. Log the share in the database
-      // 3. Track email delivery status
-
       // Add to existing shares
       const newShare: ShareLink = {
         id: Date.now().toString(),
@@ -202,6 +199,9 @@ Best regards,
         message: `Access link sent successfully to ${recipientEmail}`,
       })
 
+      // Track the sharing action
+      analytics.trackShare("Send Email Invitation", permissions)
+
       // Reset form
       setRecipientEmail("")
       setRecipientName("")
@@ -212,6 +212,7 @@ Best regards,
         type: "error",
         message: "Failed to send email. Please try again.",
       })
+      analytics.trackAppError(error as Error, "Email Sharing")
     } finally {
       setIsSending(false)
     }

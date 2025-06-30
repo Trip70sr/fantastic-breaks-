@@ -23,8 +23,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import EmailSharing from "@/components/email-sharing"
 import TestShareDemo from "@/components/test-share-demo"
+import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
 
 export default function EmployeeBreakDashboard() {
+  const analytics = useAnalytics()
+  usePageAnalytics("Employee Break Dashboard")
+
   const [employees, setEmployees] = useState<Employee[]>([])
   const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
@@ -69,30 +73,44 @@ export default function EmployeeBreakDashboard() {
     localStorage.setItem("lastDataUpdate", new Date().toISOString())
   }, [employees])
 
-  const handleAddBreakEntry = (entry: BreakEntry) => {
-    setBreakEntries([...breakEntries, { ...entry, id: Date.now().toString() }])
-  }
+  const handleExportCSV = () => {
+    const formattedDate = format(selectedDate, "yyyy-MM-dd")
+    exportToCSV(filteredBreakEntries, employees, `employee-breaks-${formattedDate}`)
 
-  const handleUpdateBreakEntry = (updatedEntry: BreakEntry) => {
-    setBreakEntries(breakEntries.map((entry) => (entry.id === updatedEntry.id ? updatedEntry : entry)))
-  }
-
-  const handleDeleteBreakEntry = (id: string) => {
-    setBreakEntries(breakEntries.filter((entry) => entry.id !== id))
+    // Track the export action
+    analytics.trackExport("CSV Export", filteredBreakEntries.length)
   }
 
   const handleAddEmployee = (employee: Employee) => {
     setEmployees([...employees, { ...employee, id: Date.now().toString() }])
+    analytics.trackEmployee("Add Employee", employee.name)
   }
 
   const handleUpdateEmployee = (updatedEmployee: Employee) => {
     setEmployees(employees.map((employee) => (employee.id === updatedEmployee.id ? updatedEmployee : employee)))
+    analytics.trackEmployee("Update Employee", updatedEmployee.name)
   }
 
   const handleDeleteEmployee = (id: string) => {
+    const employee = employees.find((e) => e.id === id)
     setEmployees(employees.filter((employee) => employee.id !== id))
-    // Also remove any break entries associated with this employee
     setBreakEntries(breakEntries.filter((entry) => entry.employeeId !== id && entry.coverageEmployeeId !== id))
+    analytics.trackEmployee("Delete Employee", employee?.name)
+  }
+
+  const handleAddBreakEntry = (entry: BreakEntry) => {
+    setBreakEntries([...breakEntries, { ...entry, id: Date.now().toString() }])
+    analytics.trackBreak("Add Break Entry", entry.break1Start ? "Break 1" : "Shift Only")
+  }
+
+  const handleUpdateBreakEntry = (updatedEntry: BreakEntry) => {
+    setBreakEntries(breakEntries.map((entry) => (entry.id === updatedEntry.id ? updatedEntry : entry)))
+    analytics.trackBreak("Update Break Entry")
+  }
+
+  const handleDeleteBreakEntry = (id: string) => {
+    setBreakEntries(breakEntries.filter((entry) => entry.id !== id))
+    analytics.trackBreak("Delete Break Entry")
   }
 
   const handleRestoreData = (restoredEmployees: Employee[], restoredBreakEntries: BreakEntry[]) => {
@@ -103,6 +121,8 @@ export default function EmployeeBreakDashboard() {
     localStorage.setItem("employees", JSON.stringify(restoredEmployees))
     localStorage.setItem("breakEntries", JSON.stringify(restoredBreakEntries))
     localStorage.setItem("lastDataUpdate", new Date().toISOString())
+
+    analytics.trackData("Restore Data", `${restoredEmployees.length} employees, ${restoredBreakEntries.length} entries`)
   }
 
   const getWorkingEmployees = (date: Date) => {
@@ -214,11 +234,6 @@ export default function EmployeeBreakDashboard() {
 
     return isSameDate && matchesEmployee && matchesDepartment && matchesBreakStatus
   })
-
-  const handleExportCSV = () => {
-    const formattedDate = format(selectedDate, "yyyy-MM-dd")
-    exportToCSV(filteredBreakEntries, employees, `employee-breaks-${formattedDate}`)
-  }
 
   const handleQuickAddBreak = (employeeId: string, breakType: "break1" | "break2") => {
     const entry = breakEntries.find(
