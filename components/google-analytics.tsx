@@ -4,11 +4,17 @@ import Script from "next/script"
 import { GA_TRACKING_ID, initGA } from "@/lib/gtag"
 
 export default function GoogleAnalytics() {
-  if (!GA_TRACKING_ID) return null
+  // Don't load analytics if no tracking ID is provided
+  if (!GA_TRACKING_ID) {
+    return null
+  }
 
   return (
     <>
+      {/* Load Google Analytics script */}
       <Script strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`} />
+
+      {/* Initialize Google Analytics */}
       <Script
         id="google-analytics"
         strategy="afterInteractive"
@@ -21,13 +27,13 @@ export default function GoogleAnalytics() {
           `,
         }}
       />
+
+      {/* Initialize GA with privacy settings */}
       <Script
         id="ga-init"
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
-          __html: `
-            (${initGA.toString()})();
-          `,
+          __html: `(${initGA.toString()})();`,
         }}
       />
     </>

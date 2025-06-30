@@ -1,9 +1,18 @@
 export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
 
+// Check if analytics is enabled
+export const isAnalyticsEnabled = (): boolean => {
+  if (!GA_TRACKING_ID) return false
+  if (typeof window === "undefined") return false
+
+  const consent = localStorage.getItem("analytics-consent")
+  return consent === "accepted"
+}
+
 // Initialize Google Analytics
 export const initGA = () => {
   if (typeof window !== "undefined" && GA_TRACKING_ID) {
-    // Set default consent state
+    // Set default consent state (denied until user accepts)
     window.gtag("consent", "default", {
       analytics_storage: "denied",
       ad_storage: "denied",
@@ -11,19 +20,28 @@ export const initGA = () => {
       ad_personalization: "denied",
     })
 
-    // Configure Google Analytics
+    // Configure Google Analytics with privacy settings
     window.gtag("config", GA_TRACKING_ID, {
       anonymize_ip: true,
       allow_google_signals: false,
       allow_ad_personalization_signals: false,
       cookie_flags: "SameSite=Strict;Secure",
+      send_page_view: false, // We'll send page views manually
     })
+
+    // Check if user has already consented
+    const consent = localStorage.getItem("analytics-consent")
+    if (consent === "accepted") {
+      window.gtag("consent", "update", {
+        analytics_storage: "granted",
+      })
+    }
   }
 }
 
 // Grant consent for analytics
 export const grantAnalyticsConsent = () => {
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && window.gtag) {
     window.gtag("consent", "update", {
       analytics_storage: "granted",
     })
@@ -32,11 +50,11 @@ export const grantAnalyticsConsent = () => {
 
 // Track page views
 export const pageview = (url: string) => {
-  if (typeof window !== "undefined" && GA_TRACKING_ID) {
-    window.gtag("config", GA_TRACKING_ID, {
-      page_path: url,
-    })
-  }
+  if (!isAnalyticsEnabled() || !window.gtag) return
+
+  window.gtag("config", GA_TRACKING_ID, {
+    page_path: url,
+  })
 }
 
 // Track custom events
@@ -51,26 +69,29 @@ export const event = ({
   label?: string
   value?: number
 }) => {
-  if (typeof window !== "undefined" && GA_TRACKING_ID) {
-    window.gtag("event", action, {
-      event_category: category,
-      event_label: label,
-      value: value,
-    })
-  }
-}
+  if (!isAnalyticsEnabled() || !window.gtag) return
 
-// Track employee management actions
-export const trackEmployeeAction = (action: "add" | "edit" | "delete", department?: string) => {
-  event({
-    action: `employee_${action}`,
-    category: "Employee Management",
-    label: department || "unknown",
+  window.gtag("event", action, {
+    event_category: category,
+    event_label: label,
+    value: value,
   })
 }
 
-// Track break scheduling
-export const trackBreakAction = (action: "schedule" | "modify" | "cancel") => {
+// Specific tracking functions for the Employee Break App
+
+// Track employee management actions (anonymized)
+export const trackEmployeeAction = (action: "add" | "edit" | "delete" | "import", count?: number) => {
+  event({
+    action: `employee_${action}`,
+    category: "Employee Management",
+    label: count ? `count_${count}` : undefined,
+    value: count,
+  })
+}
+
+// Track break scheduling actions
+export const trackBreakAction = (action: "schedule" | "modify" | "cancel" | "assign_coverage") => {
   event({
     action: `break_${action}`,
     category: "Break Management",
@@ -78,26 +99,67 @@ export const trackBreakAction = (action: "schedule" | "modify" | "cancel") => {
 }
 
 // Track data operations
-export const trackDataAction = (action: "export" | "backup" | "restore") => {
+export const trackDataAction = (action: "export" | "backup" | "restore" | "import", format?: string) => {
   event({
     action: `data_${action}`,
     category: "Data Management",
+    label: format,
   })
 }
 
-// Track sharing actions
-export const trackSharingAction = (action: "email_sent" | "link_created" | "access_granted") => {
+// Track sharing and collaboration
+export const trackSharingAction = (action: "email_sent" | "link_created" | "access_granted" | "shared_view") => {
   event({
     action,
-    category: "Sharing",
+    category: "Sharing & Collaboration",
   })
 }
 
-// Track errors
-export const trackError = (error: string, context?: string) => {
+// Track user interface interactions
+export const trackUIAction = (action: string, component: string) => {
   event({
-    action: "error_occurred",
-    category: "Error",
-    label: `${error}${context ? ` - ${context}` : ""}`,
+    action,
+    category: "UI Interaction",
+    label: component,
+  })
+}
+
+// Track errors (anonymized, no sensitive data)
+export const trackError = (error: string, context?: string, fatal = false) => {
+  if (!isAnalyticsEnabled() || !window.gtag) return
+
+  window.gtag("event", "exception", {
+    description: `${context ? `${context}: ` : ""}${error}`,
+    fatal,
+  })
+}
+
+// Track performance metrics
+export const trackTiming = (name: string, value: number, category = "Performance") => {
+  event({
+    action: "timing_complete",
+    category,
+    label: name,
+    value: Math.round(value),
+  })
+}
+
+// Track user engagement
+export const trackEngagement = (feature: string, duration?: number) => {
+  event({
+    action: "user_engagement",
+    category: "Feature Usage",
+    label: feature,
+    value: duration ? Math.round(duration / 1000) : undefined, // Convert to seconds
+  })
+}
+
+// Track search and filtering
+export const trackSearch = (searchType: string, resultsCount?: number) => {
+  event({
+    action: "search",
+    category: "Search & Filter",
+    label: searchType,
+    value: resultsCount,
   })
 }

@@ -8,9 +8,9 @@ const nextConfig = {
     unoptimized: true,
   },
   
-  // Set base path for GitHub Pages (replace 'fantastic-breaks' with your repo name)
-  basePath: '/fantastic-breaks',
-  assetPrefix: '/fantastic-breaks/',
+  // Set base path for GitHub Pages (update this to match your repository name)
+  basePath: '/Employee-Breaks',
+  assetPrefix: '/Employee-Breaks/',
   
   // Enable strict mode for better development experience
   reactStrictMode: true,
