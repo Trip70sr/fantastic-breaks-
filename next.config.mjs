@@ -1,14 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+  basePath: '/fantastic-breaks',
+  assetPrefix: '/fantastic-breaks/',
   experimental: {
     // Enable experimental features if needed
-  },
-  images: {
-    domains: [
-      // Add any external image domains you might use
-      'localhost',
-    ],
-    unoptimized: true,
   },
   // Enable strict mode for better development experience
   reactStrictMode: true,
@@ -41,20 +41,6 @@ const nextConfig = {
           },
         ],
       },
-    ]
-  },
-  
-  // Redirects for better UX
-  async redirects() {
-    return [
-      // Add any redirects you need
-    ]
-  },
-  
-  // Rewrites for API routes or other purposes
-  async rewrites() {
-    return [
-      // Add any rewrites you need
     ]
   },
   
