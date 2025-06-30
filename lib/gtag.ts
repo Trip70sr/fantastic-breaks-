@@ -140,6 +140,56 @@ export const trackBreakAction = (action: "schedule" | "modify" | "cancel"): void
     category: "Break Management",
   })
 
+// Data-management actions (exported for useDataAnalytics hook)
+export const trackDataAction = (action: "export" | "backup" | "restore" | "import", format?: string): void =>
+  event({
+    action: `data_${action}`,
+    category: "Data Management",
+    label: format,
+  })
+
+// Sharing / collaboration actions (exported for useSharingAnalytics hook)
+export const trackSharingAction = (action: "email_sent" | "link_created" | "access_granted" | "shared_view"): void =>
+  event({
+    action,
+    category: "Sharing & Collaboration",
+  })
+
+// UI interaction actions (exported for generic UI tracking)
+export const trackUIAction = (action: string, component: string): void =>
+  event({
+    action,
+    category: "UI Interaction",
+    label: component,
+  })
+
+// Performance / timing metrics (exported for usePerformanceTracking hook)
+export const trackTiming = (name: string, value: number, category = "Performance"): void =>
+  event({
+    action: "timing_complete",
+    category,
+    label: name,
+    value: Math.round(value),
+  })
+
+// Feature-usage / engagement metrics
+export const trackEngagement = (feature: string, durationMs?: number): void =>
+  event({
+    action: "user_engagement",
+    category: "Feature Usage",
+    label: feature,
+    value: durationMs ? Math.round(durationMs / 1000) : undefined, // value in seconds
+  })
+
+// Search & filter actions (exported for useSearchAnalytics hook)
+export const trackSearch = (searchType: string, resultsCount?: number): void =>
+  event({
+    action: "search",
+    category: "Search & Filter",
+    label: searchType,
+    value: resultsCount,
+  })
+
 /* ------------------------------------------------------------------ */
 /*  🛑  ERROR & EXCEPTION TRACKING                                    */
 /* ------------------------------------------------------------------ */
