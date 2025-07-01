@@ -1,12 +1,54 @@
 {
   "name": "employee-break-app",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "Comprehensive employee break management system with scheduling, tracking, and compliance features",
+  "keywords": [
+    "employee-management",
+    "break-scheduling",
+    "workforce-management",
+    "hr-tools",
+    "nextjs",
+    "react",
+    "typescript"
+  ],
+  "homepage": "https://triptech-code.github.io/Employee-Breaks/",
+  "bugs": {
+    "url": "https://github.com/Triptech-code/Employee-Breaks/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Triptech-code/Employee-Breaks.git"
+  },
+  "author": {
+    "name": "Triptech-code",
+    "email": "contact@triptech.art",
+    "url": "https://triptech.art"
+  },
   "scripts": {
+    "analyze": "cross-env ANALYZE=true next build",
     "build": "next build",
+    "clean": "rm -rf .next out",
     "dev": "next dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "next lint",
-    "start": "next start"
+    "lint:fix": "next lint --fix",
+    "start": "next start",
+    "test": "echo \"No tests specified\" && exit 0",
+    "type-check": "tsc --noEmit"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.1.2",
@@ -42,10 +84,16 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
+    "cross-env": "^7.0.3",
     "eslint": "^8",
     "eslint-config-next": "14.0.4",
     "postcss": "^8.5",
+    "prettier": "^3.0.0",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
