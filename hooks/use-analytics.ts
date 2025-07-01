@@ -1,186 +1,170 @@
 "use client"
 
 import { useEffect, useCallback } from "react"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 import {
   pageview,
-  event,
   trackEmployeeAction,
   trackBreakAction,
   trackDataAction,
   trackSharingAction,
   trackUIAction,
-  trackError,
   trackTiming,
   trackEngagement,
   trackSearch,
+  trackError,
   isAnalyticsEnabled,
 } from "@/lib/gtag"
 
 // Main analytics hook
-export const useAnalytics = () => {
+export function useAnalytics() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Check if user has consented to analytics
-    const consent = localStorage.getItem("analytics-consent")
-    if (consent === "accepted") {
-      const url = pathname + searchParams.toString()
-      pageview(url)
+    if (isAnalyticsEnabled()) {
+      pageview(pathname)
     }
-  }, [pathname, searchParams])
+  }, [pathname])
 
-  // Track custom events
   const trackEvent = useCallback((action: string, category: string, label?: string, value?: number) => {
-    const consent = localStorage.getItem("analytics-consent")
-    if (consent === "accepted") {
-      event(action, category, label, value)
+    if (isAnalyticsEnabled()) {
+      trackUIAction(action, category)
     }
   }, [])
 
-  // Memoized tracking functions
-  const trackEmployee = useCallback(trackEmployeeAction, [])
-  const trackBreak = useCallback(trackBreakAction, [])
-  const trackData = useCallback(trackDataAction, [])
-  const trackSharing = useCallback(trackSharingAction, [])
-  const trackUI = useCallback(trackUIAction, [])
-  const trackAppError = useCallback(trackError, [])
-  const trackPerformance = useCallback(trackTiming, [])
-  const trackFeatureUsage = useCallback(trackEngagement, [])
-  const trackSearchAction = useCallback(trackSearch, [])
-
   return {
-    // Core tracking functions
     trackEvent,
-    trackEmployee,
-    trackBreak,
-    trackData,
-    trackSharing,
-    trackUI,
-    trackError: trackAppError,
-    trackTiming: trackPerformance,
-    trackEngagement: trackFeatureUsage,
-    trackSearch: trackSearchAction,
-
-    // Utility
-    isEnabled: isAnalyticsEnabled(),
+    trackEmployeeAction,
+    trackBreakAction,
+    trackDataAction,
+    trackSharingAction,
+    trackError,
   }
 }
 
 // Page analytics hook (for backward compatibility)
-export const usePageAnalytics = useAnalytics
+export function usePageAnalytics() {
+  const pathname = usePathname()
 
-// Specialized hooks for different parts of the app
-
-// Employee management analytics
-export const useEmployeeAnalytics = () => {
-  const { trackEmployee, trackError } = useAnalytics()
-
-  return {
-    trackAddEmployee: useCallback(() => trackEmployee("add"), [trackEmployee]),
-    trackEditEmployee: useCallback(() => trackEmployee("edit"), [trackEmployee]),
-    trackDeleteEmployee: useCallback(() => trackEmployee("delete"), [trackEmployee]),
-    trackBulkImport: useCallback((count: number) => trackEmployee("import", count), [trackEmployee]),
-    trackError: useCallback((error: string) => trackError(error, "Employee Management"), [trackError]),
-  }
-}
-
-// Break management analytics
-export const useBreakAnalytics = () => {
-  const { trackBreak, trackError } = useAnalytics()
-
-  return {
-    trackScheduleBreak: useCallback(() => trackBreak("schedule"), [trackBreak]),
-    trackModifyBreak: useCallback(() => trackBreak("modify"), [trackBreak]),
-    trackCancelBreak: useCallback(() => trackBreak("cancel"), [trackBreak]),
-    trackAssignCoverage: useCallback(() => trackBreak("assign_coverage"), [trackBreak]),
-    trackError: useCallback((error: string) => trackError(error, "Break Management"), [trackError]),
-  }
+  useEffect(() => {
+    if (isAnalyticsEnabled()) {
+      pageview(pathname)
+    }
+  }, [pathname])
 }
 
 // Data management analytics
-export const useDataAnalytics = () => {
-  const { trackData, trackError } = useAnalytics()
+export function useDataAnalytics() {
+  const trackExport = useCallback((format: string) => {
+    trackDataAction("export", format)
+  }, [])
+
+  const trackBackup = useCallback(() => {
+    trackDataAction("backup")
+  }, [])
+
+  const trackRestore = useCallback(() => {
+    trackDataAction("restore")
+  }, [])
+
+  const trackImport = useCallback((format: string) => {
+    trackDataAction("import", format)
+  }, [])
 
   return {
-    trackExportData: useCallback((format: string) => trackData("export", format), [trackData]),
-    trackBackupData: useCallback(() => trackData("backup"), [trackData]),
-    trackRestoreData: useCallback(() => trackData("restore"), [trackData]),
-    trackImportData: useCallback((format: string) => trackData("import", format), [trackData]),
-    trackError: useCallback((error: string) => trackError(error, "Data Management"), [trackError]),
+    trackExport,
+    trackBackup,
+    trackRestore,
+    trackImport,
   }
 }
 
 // Sharing analytics
-export const useSharingAnalytics = () => {
-  const { trackSharing, trackError } = useAnalytics()
+export function useSharingAnalytics() {
+  const trackEmailSent = useCallback(() => {
+    trackSharingAction("email_sent")
+  }, [])
+
+  const trackLinkCreated = useCallback(() => {
+    trackSharingAction("link_created")
+  }, [])
+
+  const trackAccessGranted = useCallback(() => {
+    trackSharingAction("access_granted")
+  }, [])
+
+  const trackSharedView = useCallback(() => {
+    trackSharingAction("shared_view")
+  }, [])
 
   return {
-    trackEmailSent: useCallback(() => trackSharing("email_sent"), [trackSharing]),
-    trackLinkCreated: useCallback(() => trackSharing("link_created"), [trackSharing]),
-    trackAccessGranted: useCallback(() => trackSharing("access_granted"), [trackSharing]),
-    trackSharedView: useCallback(() => trackSharing("shared_view"), [trackSharing]),
-    trackError: useCallback((error: string) => trackError(error, "Sharing"), [trackError]),
+    trackEmailSent,
+    trackLinkCreated,
+    trackAccessGranted,
+    trackSharedView,
   }
 }
 
-// Performance tracking hook
-export const usePerformanceTracking = () => {
-  const { trackTiming } = useAnalytics()
+// Performance tracking
+export function usePerformanceTracking() {
+  const trackLoadTime = useCallback((componentName: string, loadTime: number) => {
+    trackTiming(`${componentName}_load`, loadTime, "Component Performance")
+  }, [])
 
-  const trackComponentLoad = useCallback(
-    (componentName: string, loadTime: number) => {
-      trackTiming(`${componentName}_load`, loadTime, "Component Performance")
-    },
-    [trackTiming],
-  )
-
-  const trackDataLoad = useCallback(
-    (dataType: string, loadTime: number) => {
-      trackTiming(`${dataType}_data_load`, loadTime, "Data Loading")
-    },
-    [trackTiming],
-  )
-
-  const trackUserAction = useCallback(
-    (actionName: string, duration: number) => {
-      trackTiming(`${actionName}_duration`, duration, "User Actions")
-    },
-    [trackTiming],
-  )
+  const trackUserAction = useCallback((actionName: string, duration: number) => {
+    trackTiming(`${actionName}_duration`, duration, "User Actions")
+  }, [])
 
   return {
-    trackComponentLoad,
-    trackDataLoad,
+    trackLoadTime,
     trackUserAction,
   }
 }
 
-// Search and filtering analytics
-export const useSearchAnalytics = () => {
-  const { trackSearch } = useAnalytics()
+// Feature engagement tracking
+export function useEngagementTracking() {
+  const trackFeatureUsage = useCallback((featureName: string, duration?: number) => {
+    trackEngagement(featureName, duration)
+  }, [])
+
+  const trackUserFlow = useCallback((flowName: string, stepNumber: number) => {
+    trackUIAction(`${flowName}_step_${stepNumber}`, "User Flow")
+  }, [])
 
   return {
-    trackEmployeeSearch: useCallback(
-      (resultsCount: number) => {
-        trackSearch("employee_search", resultsCount)
-      },
-      [trackSearch],
-    ),
+    trackFeatureUsage,
+    trackUserFlow,
+  }
+}
 
-    trackBreakFilter: useCallback(
-      (filterType: string, resultsCount: number) => {
-        trackSearch(`break_filter_${filterType}`, resultsCount)
-      },
-      [trackSearch],
-    ),
+// Search and filter analytics
+export function useSearchAnalytics() {
+  const trackSearchQuery = useCallback((searchType: string, resultsCount: number) => {
+    trackSearch(searchType, resultsCount)
+  }, [])
 
-    trackDateRangeFilter: useCallback(
-      (resultsCount: number) => {
-        trackSearch("date_range_filter", resultsCount)
-      },
-      [trackSearch],
-    ),
+  const trackFilterUsage = useCallback((filterType: string, filterValue: string) => {
+    trackUIAction(`filter_${filterType}`, `Filter Usage: ${filterValue}`)
+  }, [])
+
+  return {
+    trackSearchQuery,
+    trackFilterUsage,
+  }
+}
+
+// Error tracking hook
+export function useErrorTracking() {
+  const trackApplicationError = useCallback((error: Error, context?: string) => {
+    trackError(error.message, context, false)
+  }, [])
+
+  const trackFatalError = useCallback((error: Error, context?: string) => {
+    trackError(error.message, context, true)
+  }, [])
+
+  return {
+    trackApplicationError,
+    trackFatalError,
   }
 }
