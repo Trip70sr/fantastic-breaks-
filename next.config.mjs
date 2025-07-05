@@ -2,9 +2,8 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
-  // CRITICAL: Must match your exact repository name
-  basePath: '/fantastic-breaks-',
-  assetPrefix: '/fantastic-breaks-/',
+  basePath: '/Employee-Breaks-/',
+  assetPrefix: '/Employee-Breaks-/',
   images: {
     unoptimized: true,
   },
