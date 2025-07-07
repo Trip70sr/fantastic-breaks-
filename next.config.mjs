@@ -2,10 +2,12 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
-  basePath: '/Employee-Breaks',
-  assetPrefix: '/Employee-Breaks/',
+  skipTrailingSlashRedirect: true,
+  distDir: 'out',
+  basePath: '/fantastic-breaks-',
+  assetPrefix: '/fantastic-breaks-/',
   images: {
-    unoptimized: true,
+    unoptimized: true
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -13,6 +15,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    optimizePackageImports: ['lucide-react']
+  }
 }
 
 export default nextConfig
