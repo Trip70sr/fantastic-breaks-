@@ -7,7 +7,7 @@ const nextConfig = {
   basePath: '/fantastic-breaks-',
   assetPrefix: '/fantastic-breaks-/',
   images: {
-    unoptimized: true
+    unoptimized: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -16,8 +16,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    optimizePackageImports: ['lucide-react']
-  }
+    missingSuspenseWithCSRBailout: false,
+  },
 }
 
 export default nextConfig

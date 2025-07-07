@@ -1,56 +1,36 @@
 {
-  "name": "employee-break-app",
+  "name": "employee-break-protocol-app",
   "version": "1.0.0",
   "private": true,
   "description": "Comprehensive employee break management system with scheduling, tracking, and compliance features",
   "keywords": [
-    "employee-management",
-    "break-scheduling",
-    "workforce-management",
-    "hr-tools",
-    "nextjs",
-    "react",
-    "typescript"
+    "employee",
+    "break",
+    "management",
+    "scheduling",
+    "workforce",
+    "compliance",
+    "hr",
+    "timesheet",
+    "tracking"
   ],
   "homepage": "https://trip70sr.github.io/fantastic-breaks-/",
-  "bugs": {
-    "url": "https://github.com/Trip70sr/fantastic-breaks-/issues"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Trip70sr/fantastic-breaks-/.git"
+    "url": "https://github.com/Trip70sr/fantastic-breaks-.git"
   },
-  "author": {
-    "name": "Triptech-code",
-    "email": "contact@triptech.art",
-    "url": "https://triptech.art"
-  },
+  "license": "MIT",
+  "author": "Triptech-code",
   "scripts": {
-    "analyze": "cross-env ANALYZE=true next build",
     "build": "next build",
-    "clean": "rm -rf .next out",
+    "deploy": "npm run build && npm run export",
     "dev": "next dev",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "export": "next export",
     "lint": "next lint",
-    "lint:fix": "next lint --fix",
-    "start": "next start",
-    "test": "echo \"No tests specified\" && exit 0",
-    "type-check": "tsc --noEmit"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "start": "next start"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.3.2",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
@@ -96,23 +76,18 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "latest"
+    "vaul": "latest",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "autoprefixer": "^10.0.1",
-    "cross-env": "^7.0.3",
-    "eslint": "^8",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
     "eslint-config-next": "14.0.4",
     "postcss": "^8.5",
-    "prettier": "^3.0.0",
-    "tailwindcss": "^3.3.0",
+    "tailwindcss": "^3.3.6",
     "typescript": "^5"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
   }
 }
