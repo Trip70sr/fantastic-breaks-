@@ -8,16 +8,18 @@ const nextConfig = {
   assetPrefix: '/fantastic-breaks-/',
   images: {
     unoptimized: true,
+    loader: 'custom',
+    loaderFile: './image-loader.js'
+  },
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
-  },
-  experimental: {
-    missingSuspenseWithCSRBailout: false,
-  },
+  }
 }
 
 export default nextConfig

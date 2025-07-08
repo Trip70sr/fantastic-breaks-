@@ -23,7 +23,6 @@
   "author": "Triptech-code",
   "scripts": {
     "build": "next build",
-    "deploy": "npm run build && npm run export",
     "dev": "next dev",
     "export": "next export",
     "lint": "next lint",
@@ -84,10 +83,14 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.16",
-    "eslint": "^8.55.0",
-    "eslint-config-next": "14.0.4",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.16",
     "postcss": "^8.5",
     "tailwindcss": "^3.3.6",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
