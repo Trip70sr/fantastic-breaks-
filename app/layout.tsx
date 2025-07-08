@@ -1,33 +1,18 @@
 import type React from "react"
-import type { Metadata } from "next"
+import "@/app/globals.css"
+
 import { Inter } from "next/font/google"
-import "./globals.css"
+import type { Metadata } from "next"
+import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
 import GoogleAnalytics from "@/components/google-analytics"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Break Management System",
-  description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
-  keywords: ["employee management", "break scheduling", "workforce management", "hr tools"],
-  authors: [{ name: "Triptech-code", url: "https://triptech.art" }],
-  creator: "Triptech-code",
-  publisher: "Triptech-code",
-  robots: "index, follow",
-  openGraph: {
-    title: "Employee Break Management System",
-    description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
-    type: "website",
-    locale: "en_US",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Employee Break Management System",
-    description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
-  },
+  title: "Employee Break Protocol",
+  description: "Manage employee breaks, track timesheets, and stay compliant.",
     generator: 'v0.dev'
 }
 
@@ -38,16 +23,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <GoogleAnalytics />
-      </head>
-      <body className={inter.className}>
-        <Suspense fallback={null}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <Suspense fallback={null}>
+            {/* App pages render here */}
             {children}
-            <Toaster />
-          </ThemeProvider>
-        </Suspense>
+
+            {/* Analytics (no props needed) */}
+            <GoogleAnalytics />
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   )
