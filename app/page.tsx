@@ -28,7 +28,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <header className="bg-primary py-4 px-6 shadow-md">
         <div className="container mx-auto">
           <h1 className="text-2xl font-bold text-white">Employee Break Protocol</h1>

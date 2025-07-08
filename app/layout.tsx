@@ -3,29 +3,31 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import GoogleAnalytics from "@/components/google-analytics"
+import { Toaster } from "@/components/ui/toaster"
+import { GoogleAnalytics } from "@/components/google-analytics"
+import { PrivacyBanner } from "@/components/privacy-banner"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Break Protocol App",
-  description: "Comprehensive employee break management system with scheduling, tracking, and compliance features.",
-  keywords: "employee breaks, scheduling, workforce management, compliance, HR tools",
-  authors: [{ name: "Triptech-code" }],
+  title: "Employee Break Management System",
+  description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
+  keywords: ["employee management", "break scheduling", "workforce management", "hr tools"],
+  authors: [{ name: "Triptech-code", url: "https://triptech.art" }],
   creator: "Triptech-code",
   publisher: "Triptech-code",
   robots: "index, follow",
   openGraph: {
-    title: "Employee Break Protocol App",
-    description: "Streamline your employee break management with our comprehensive scheduling and tracking system.",
+    title: "Employee Break Management System",
+    description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Employee Break Protocol App",
-    description: "Comprehensive employee break management system",
+    title: "Employee Break Management System",
+    description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
   },
     generator: 'v0.dev'
 }
@@ -41,9 +43,11 @@ export default function RootLayout({
         <GoogleAnalytics />
       </head>
       <body className={inter.className}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <Suspense fallback={null}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
+            <Toaster />
+            <PrivacyBanner />
           </ThemeProvider>
         </Suspense>
       </body>
