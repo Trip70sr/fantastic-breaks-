@@ -5,7 +5,6 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import GoogleAnalytics from "@/components/google-analytics"
-import PrivacyBanner from "@/components/privacy-banner"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -47,7 +46,6 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
             <Toaster />
-            <PrivacyBanner />
           </ThemeProvider>
         </Suspense>
       </body>
