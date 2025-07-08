@@ -5,7 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import GoogleAnalytics from "@/components/google-analytics"
-import { PrivacyBanner } from "@/components/privacy-banner"
+import PrivacyBanner from "@/components/privacy-banner"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
