@@ -1,4 +1,4 @@
 export default function imageLoader({ src, width, quality }) {
-  const params = [`w_${width}`, `q_${quality || 75}`, "f_auto"]
-  return `${src}?${params.join("&")}`
+  const basePath = process.env.NODE_ENV === "production" ? "/fantastic-breaks-" : ""
+  return `${basePath}${src}?w=${width}&q=${quality || 75}`
 }
