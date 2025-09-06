@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "Employee Break Management System",
     description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
   },
-    generator: 'v0.dev'
+    generator: 'v0.app'
 }
 
 export default function RootLayout({

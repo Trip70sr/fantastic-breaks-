@@ -1,4 +1,9 @@
 export default function imageLoader({ src, width, quality }) {
-  const basePath = process.env.NODE_ENV === "production" ? "/fantastic-breaks-" : ""
-  return `${basePath}${src}?w=${width}&q=${quality || 75}`
+  const params = new URLSearchParams()
+  params.set("url", src)
+  params.set("w", width.toString())
+  if (quality) {
+    params.set("q", quality.toString())
+  }
+  return `/_next/image?${params.toString()}`
 }
