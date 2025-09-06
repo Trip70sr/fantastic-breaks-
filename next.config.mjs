@@ -4,10 +4,10 @@ const nextConfig = {
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
   distDir: 'out',
+  basePath: '/fantastic-breaks-',
+  assetPrefix: '/fantastic-breaks-/',
   images: {
-    unoptimized: true,
-    loader: 'custom',
-    loaderFile: './image-loader.js',
+    unoptimized: true
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -15,10 +15,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks-' : '',
-  basePath: process.env.NODE_ENV === 'production' ? '/fantastic-breaks-' : '',
   experimental: {
-    esmExternals: 'loose'
+    missingSuspenseWithCSRBailout: false,
   }
 }
 

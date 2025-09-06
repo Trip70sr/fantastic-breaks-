@@ -10,7 +10,7 @@ import { Suspense } from "react"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Break Management System",
+  title: "Employee Break Protocol",
   description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
   keywords: ["employee management", "break scheduling", "workforce management", "hr tools"],
   authors: [{ name: "Triptech-code", url: "https://triptech.art" }],
@@ -18,16 +18,18 @@ export const metadata: Metadata = {
   publisher: "Triptech-code",
   robots: "index, follow",
   openGraph: {
-    title: "Employee Break Management System",
-    description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
+    title: "Employee Break Protocol",
+    description: "Comprehensive employee break management system",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Employee Break Management System",
-    description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
+    title: "Employee Break Protocol",
+    description: "Comprehensive employee break management system",
   },
+  viewport: "width=device-width, initial-scale=1",
+  themeColor: "#ffffff",
     generator: 'v0.app'
 }
 

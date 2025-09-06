@@ -93,21 +93,6 @@ const config = {
       screens: {
         xs: "475px",
       },
-      spacing: {
-        "18": "4.5rem",
-        "88": "22rem",
-      },
-      fontSize: {
-        xxs: "0.625rem",
-      },
-      maxWidth: {
-        "8xl": "88rem",
-        "9xl": "96rem",
-      },
-      minHeight: {
-        "screen-75": "75vh",
-        "screen-50": "50vh",
-      },
     },
   },
   plugins: [require("tailwindcss-animate")],

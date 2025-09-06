@@ -106,30 +106,24 @@
   .print-break-after {
     break-after: page;
   }
-
-  body {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
 }
 
 /* Responsive table styles */
-.table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
 @media (max-width: 768px) {
+  .table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
   .table-responsive table {
+    width: 100%;
     min-width: 600px;
   }
 }
 
 /* Animation utilities */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -141,17 +135,8 @@
   }
 }
 
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 
 /* Focus styles for accessibility */
