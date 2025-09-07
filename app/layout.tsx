@@ -13,16 +13,15 @@ export const metadata: Metadata = {
   title: "Employee Break Protocol",
   description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
   keywords: ["employee management", "break scheduling", "workforce management", "hr tools"],
-  authors: [{ name: "Trip-tech.art", url: "https://triptech.art" }],
-  creator: "Trip-tech.art",
-  publisher: "Trip-tech.art",
+  authors: [{ name: "Triptech-code", url: "https://triptech.art" }],
+  creator: "Triptech-code",
+  publisher: "Triptech-code",
   robots: "index, follow",
   openGraph: {
     title: "Employee Break Protocol",
     description: "Comprehensive employee break management system",
-    url: "https://trip70sr.github.io/fantastic-breaks-/",
-    siteName: "Employee Break Protocol",
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
@@ -44,7 +43,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Suspense fallback={null}>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
             <Toaster />
           </ThemeProvider>
