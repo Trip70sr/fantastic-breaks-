@@ -30,31 +30,49 @@ export const initialBreakEntries: BreakEntry[] = [
     id: "1",
     employeeId: "1",
     date: "2024-01-15",
-    breakStart: "10:00",
-    breakEnd: "10:15",
-    lunchStart: "12:00",
-    lunchEnd: "13:00",
-    status: "completed",
+    shiftStart: "08:00",
+    shiftEnd: "16:00",
+    break1Start: "10:00",
+    break1End: "10:15",
+    break2Start: "14:00",
+    break2End: "14:15",
+    coverageEmployeeId: "2",
+    coverage2EmployeeId: "3",
+    outsideTherapyStart: "",
+    outsideTherapyEnd: "",
+    outsideTherapyReason: "",
   },
   {
     id: "2",
     employeeId: "2",
     date: "2024-01-15",
-    breakStart: "10:15",
-    breakEnd: "10:30",
-    lunchStart: "12:30",
-    lunchEnd: "13:30",
-    status: "completed",
+    shiftStart: "09:00",
+    shiftEnd: "17:00",
+    break1Start: "11:00",
+    break1End: "11:15",
+    break2Start: "15:00",
+    break2End: "15:15",
+    coverageEmployeeId: "1",
+    coverage2EmployeeId: "4",
+    outsideTherapyStart: "",
+    outsideTherapyEnd: "",
+    outsideTherapyReason: "",
   },
   {
     id: "3",
     employeeId: "3",
     date: "2024-01-15",
-    breakStart: "09:45",
-    breakEnd: "10:00",
-    lunchStart: "11:45",
-    lunchEnd: "12:45",
-    status: "in-progress",
+    shiftStart: "07:00",
+    shiftEnd: "15:00",
+    break1Start: "09:00",
+    break1End: "09:15",
+    break2Start: "13:00",
+    break2End: "13:15",
+    coverageEmployeeId: "4",
+    coverage2EmployeeId: "1",
+    outsideTherapyStart: "11:00",
+    outsideTherapyEnd: "12:00",
+    outsideTherapyReason: "Client meeting",
   },
 ]
 
@@ -79,6 +97,7 @@ export function saveBreakEntries(entries: BreakEntry[]): void {
 
   try {
     localStorage.setItem("breakEntries", JSON.stringify(entries))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
   } catch (error) {
     console.error("Error saving break entries:", error)
   }
@@ -105,6 +124,7 @@ export function saveEmployees(employees: Employee[]): void {
 
   try {
     localStorage.setItem("employees", JSON.stringify(employees))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
   } catch (error) {
     console.error("Error saving employees:", error)
   }
@@ -141,4 +161,80 @@ export function getDepartments(employees: Employee[]): string[] {
 export function filterEmployeesByDepartment(employees: Employee[], department: string): Employee[] {
   if (department === "all") return employees
   return employees.filter((emp) => emp.department === department)
+}
+
+// Get break statistics
+export function getBreakStats(entries: BreakEntry[], employees: Employee[]) {
+  const totalEntries = entries.length
+  const entriesWithBreaks = entries.filter((entry) => entry.break1Start && entry.break1End).length
+  const entriesWithSecondBreaks = entries.filter((entry) => entry.break2Start && entry.break2End).length
+  const entriesWithCoverage = entries.filter(
+    (entry) => entry.coverageEmployeeId && entry.coverageEmployeeId !== "none",
+  ).length
+
+  return {
+    totalEntries,
+    entriesWithBreaks,
+    entriesWithSecondBreaks,
+    entriesWithCoverage,
+    breakComplianceRate: totalEntries > 0 ? (entriesWithBreaks / totalEntries) * 100 : 0,
+    coverageRate: entriesWithBreaks > 0 ? (entriesWithCoverage / entriesWithBreaks) * 100 : 0,
+  }
+}
+
+// Get working employees for a specific date
+export function getWorkingEmployeesForDate(entries: BreakEntry[], employees: Employee[], date: string): Employee[] {
+  const workingEmployeeIds = entries.filter((entry) => entry.date === date).map((entry) => entry.employeeId)
+
+  return employees.filter((emp) => workingEmployeeIds.includes(emp.id))
+}
+
+// Validate break entry data
+export function validateBreakEntry(entry: Partial<BreakEntry>): string[] {
+  const errors: string[] = []
+
+  if (!entry.employeeId) {
+    errors.push("Employee is required")
+  }
+
+  if (!entry.date) {
+    errors.push("Date is required")
+  }
+
+  if (!entry.shiftStart) {
+    errors.push("Shift start time is required")
+  }
+
+  if (!entry.shiftEnd) {
+    errors.push("Shift end time is required")
+  }
+
+  if (entry.shiftStart && entry.shiftEnd) {
+    const startTime = new Date(`2000-01-01T${entry.shiftStart}:00`)
+    const endTime = new Date(`2000-01-01T${entry.shiftEnd}:00`)
+
+    if (startTime >= endTime) {
+      errors.push("Shift end time must be after start time")
+    }
+  }
+
+  if (entry.break1Start && entry.break1End) {
+    const break1Start = new Date(`2000-01-01T${entry.break1Start}:00`)
+    const break1End = new Date(`2000-01-01T${entry.break1End}:00`)
+
+    if (break1Start >= break1End) {
+      errors.push("Break 1 end time must be after start time")
+    }
+  }
+
+  if (entry.break2Start && entry.break2End) {
+    const break2Start = new Date(`2000-01-01T${entry.break2Start}:00`)
+    const break2End = new Date(`2000-01-01T${entry.break2End}:00`)
+
+    if (break2Start >= break2End) {
+      errors.push("Break 2 end time must be after start time")
+    }
+  }
+
+  return errors
 }

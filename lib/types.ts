@@ -1,30 +1,47 @@
+export type Department = "RBT" | "Operations" | "BCBA" | "Floater"
+
 export interface Employee {
   id: string
   name: string
-  department: string
+  department: Department
 }
 
 export interface BreakEntry {
   id: string
   employeeId: string
   date: string
+  shiftStart: string
+  shiftEnd: string
+  break1Start?: string
+  break1End?: string
+  break2Start?: string
+  break2End?: string
+  coverageEmployeeId?: string
+  coverage2EmployeeId?: string
+  outsideTherapyStart?: string
+  outsideTherapyEnd?: string
+  outsideTherapyReason?: string
+}
+
+export interface NotificationSettings {
+  directorEmail: string
+  breakDurationThreshold: number
+  enableBreakDurationAlerts: boolean
+  enableRealTimeAlerts: boolean
+  alertCooldownMinutes: number
+}
+
+export interface BreakAlert {
+  id: string
+  employeeId: string
+  employeeName: string
+  breakType: "break1" | "break2"
   breakStart: string
   breakEnd: string
-  lunchStart?: string
-  lunchEnd?: string
-  status: "scheduled" | "in-progress" | "completed" | "missed"
-}
-
-export interface BreakStats {
-  totalEmployees: number
-  onBreak: number
-  completedBreaks: number
-  missedBreaks: number
-}
-
-export interface ShareableData {
+  duration: number
+  threshold: number
   date: string
-  entries: BreakEntry[]
-  employees: Employee[]
-  generatedAt: string
+  timestamp: Date
+  emailSent: boolean
+  acknowledged: boolean
 }
