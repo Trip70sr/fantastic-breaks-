@@ -10,25 +10,25 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 195 100% 50%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
+    --secondary: 180 100% 75%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
+    --accent: 180 100% 75%;
     --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 195 100% 50%;
     --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --chart-1: 195 100% 50%;
+    --chart-2: 180 100% 75%;
+    --chart-3: 210 100% 60%;
+    --chart-4: 200 100% 65%;
+    --chart-5: 190 100% 70%;
   }
 
   .dark {
@@ -38,24 +38,24 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 195 100% 60%;
     --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 180 100% 85%;
+    --secondary-foreground: 222.2 84% 4.9%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 180 100% 85%;
+    --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --ring: 195 100% 60%;
+    --chart-1: 195 100% 60%;
+    --chart-2: 180 100% 85%;
+    --chart-3: 210 100% 70%;
+    --chart-4: 200 100% 75%;
+    --chart-5: 190 100% 80%;
   }
 }
 
@@ -68,10 +68,10 @@
   }
 }
 
-/* Custom scrollbar styles */
+/* Custom scrollbar styles with blue/aquamarine theme */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground)) hsl(var(--muted));
+  scrollbar-color: hsl(180 100% 75%) hsl(var(--muted));
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -85,12 +85,12 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground));
+  background: hsl(180 100% 75%);
   border-radius: 3px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--foreground));
+  background: hsl(195 100% 50%);
 }
 
 /* Responsive table styles */
@@ -144,9 +144,50 @@
   animation: fadeIn 0.3s ease-out;
 }
 
+/* Blue/Aquamarine gradient backgrounds */
+.bg-gradient-blue-aqua {
+  background: linear-gradient(135deg, hsl(195 100% 50%) 0%, hsl(180 100% 75%) 100%);
+}
+
+.bg-gradient-aqua-blue {
+  background: linear-gradient(135deg, hsl(180 100% 75%) 0%, hsl(195 100% 50%) 100%);
+}
+
+/* Status indicator styles with blue/aquamarine theme */
+.status-indicator {
+  position: relative;
+}
+
+.status-indicator::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -12px;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-indicator.status-success::before {
+  background-color: hsl(180 100% 40%);
+}
+
+.status-indicator.status-warning::before {
+  background-color: hsl(45 100% 50%);
+}
+
+.status-indicator.status-error::before {
+  background-color: hsl(0 84% 60%);
+}
+
+.status-indicator.status-info::before {
+  background-color: hsl(195 100% 50%);
+}
+
 /* Focus styles for accessibility */
 .focus-visible:focus-visible {
-  outline: 2px solid hsl(var(--ring));
+  outline: 2px solid hsl(195 100% 50%);
   outline-offset: 2px;
 }
 
@@ -155,11 +196,15 @@
   :root {
     --border: 0 0% 20%;
     --input: 0 0% 20%;
+    --primary: 195 100% 40%;
+    --secondary: 180 100% 60%;
   }
 
   .dark {
     --border: 0 0% 80%;
     --input: 0 0% 80%;
+    --primary: 195 100% 70%;
+    --secondary: 180 100% 90%;
   }
 }
 
@@ -173,4 +218,54 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Custom button hover effects with blue/aquamarine theme */
+.btn-hover-lift {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.btn-hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsla(195, 100%, 50%, 0.3);
+}
+
+/* Loading spinner with blue theme */
+.spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid hsl(195 100% 50%);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Card hover effects with blue/aquamarine theme */
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  box-shadow: 0 8px 25px hsla(180, 100%, 75%, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Form validation styles with blue/aquamarine theme */
+.form-error {
+  border-color: hsl(var(--destructive));
+  box-shadow: 0 0 0 1px hsl(var(--destructive));
+}
+
+.form-success {
+  border-color: hsl(180 100% 40%);
+  box-shadow: 0 0 0 1px hsl(180 100% 40%);
 }

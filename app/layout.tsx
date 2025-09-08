@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
 import GoogleAnalytics from "@/components/google-analytics"
 import { Suspense } from "react"
 
@@ -11,22 +10,16 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Employee Break Protocol",
-  description: "Comprehensive employee break management system with scheduling, tracking, and compliance features",
-  keywords: ["employee management", "break scheduling", "workforce management", "hr tools"],
-  authors: [{ name: "Triptech-code", url: "https://triptech.art" }],
-  creator: "Triptech-code",
-  publisher: "Triptech-code",
+  description: "Manage employee break schedules and compliance tracking",
+  keywords: "employee, breaks, scheduling, compliance, workplace, management",
+  authors: [{ name: "Employee Break Protocol Team" }],
+  viewport: "width=device-width, initial-scale=1",
   robots: "index, follow",
   openGraph: {
     title: "Employee Break Protocol",
-    description: "Comprehensive employee break management system",
+    description: "Manage employee break schedules and compliance tracking",
     type: "website",
     locale: "en_US",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Employee Break Protocol",
-    description: "Comprehensive employee break management system",
   },
     generator: 'v0.app'
 }
@@ -42,10 +35,9 @@ export default function RootLayout({
         <GoogleAnalytics />
       </head>
       <body className={inter.className}>
-        <Suspense fallback={null}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            {children}
-            <Toaster />
+        <Suspense fallback={<div>Loading...</div>}>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-aquamarine-50">{children}</div>
           </ThemeProvider>
         </Suspense>
       </body>
