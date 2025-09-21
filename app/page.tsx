@@ -64,21 +64,17 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="timesheet" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Break Coverage Timesheet
-                </CardTitle>
-                <CardDescription>
-                  View and manage all employee break schedules and coverage assignments. Red highlighting indicates
-                  missing coverage that needs attention.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <BreakTimesheetTable />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                  Break Coverage Dashboard
+                </h2>
+                <p className="mt-4 text-lg text-gray-600">
+                  Manage employee break schedules and ensure proper coverage assignments
+                </p>
+              </div>
+              <BreakTimesheetTable />
+            </div>
           </TabsContent>
 
           <TabsContent value="employees" className="space-y-6">

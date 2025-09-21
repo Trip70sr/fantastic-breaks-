@@ -6,37 +6,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatTime(timeString?: string): string {
-  if (!timeString) return ""
-
-  try {
-    const [hours, minutes] = timeString.split(":")
-    const hour = Number.parseInt(hours, 10)
-    const ampm = hour >= 12 ? "PM" : "AM"
-    const formattedHour = hour % 12 || 12
-
-    return `${formattedHour}:${minutes} ${ampm}`
-  } catch (error) {
-    return timeString
-  }
+export function formatTime(time: string): string {
+  if (!time) return ""
+  const [hours, minutes] = time.split(":")
+  const hour = Number.parseInt(hours, 10)
+  const ampm = hour >= 12 ? "PM" : "AM"
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${minutes} ${ampm}`
 }
 
-export function calculateBreakDuration(start?: string, end?: string): number {
-  if (!start || !end) return 0
+export function calculateBreakDuration(startTime: string, endTime: string): number {
+  if (!startTime || !endTime) return 0
 
-  const [startHours, startMinutes] = start.split(":").map(Number)
-  const [endHours, endMinutes] = end.split(":").map(Number)
+  const start = new Date(`2000-01-01T${startTime}:00`)
+  const end = new Date(`2000-01-01T${endTime}:00`)
 
-  const startTotalMinutes = startHours * 60 + startMinutes
-  const endTotalMinutes = endHours * 60 + endMinutes
+  return (end.getTime() - start.getTime()) / (1000 * 60) // Return minutes
+}
 
-  // Handle cases where the break spans across midnight
-  const duration =
-    endTotalMinutes >= startTotalMinutes
-      ? endTotalMinutes - startTotalMinutes
-      : 24 * 60 - startTotalMinutes + endTotalMinutes
+export function isValidTimeRange(startTime: string, endTime: string): boolean {
+  if (!startTime || !endTime) return false
 
-  return duration
+  const start = new Date(`2000-01-01T${startTime}:00`)
+  const end = new Date(`2000-01-01T${endTime}:00`)
+
+  return end > start
 }
 
 export function calculateTotalHours(entry: BreakEntry): string {
@@ -53,11 +47,8 @@ export function calculateTotalHours(entry: BreakEntry): string {
 
   if (!shiftStart || !shiftEnd) return "0.00"
 
-  const [startHours, startMinutes] = shiftStart.split(":").map(Number)
-  const [endHours, endMinutes] = shiftEnd.split(":").map(Number)
-
-  const startTotalMinutes = startHours * 60 + startMinutes
-  const endTotalMinutes = endHours * 60 + endMinutes
+  const startTotalMinutes = calculateBreakDuration("00:00", shiftStart)
+  const endTotalMinutes = calculateBreakDuration("00:00", shiftEnd)
 
   // Handle cases where the shift spans across midnight
   const shiftDurationMinutes =
@@ -80,11 +71,8 @@ export function calculateTotalHours(entry: BreakEntry): string {
 export function calculateShiftHours(shiftStart?: string, shiftEnd?: string): number {
   if (!shiftStart || !shiftEnd) return 0
 
-  const [startHours, startMinutes] = shiftStart.split(":").map(Number)
-  const [endHours, endMinutes] = shiftEnd.split(":").map(Number)
-
-  const startTotalMinutes = startHours * 60 + startMinutes
-  const endTotalMinutes = endHours * 60 + endMinutes
+  const startTotalMinutes = calculateBreakDuration("00:00", shiftStart)
+  const endTotalMinutes = calculateBreakDuration("00:00", shiftEnd)
 
   // Handle cases where the shift spans across midnight
   const shiftDurationMinutes =
@@ -135,37 +123,33 @@ export function exportToCSV(breakEntries: BreakEntry[], employees: Employee[], f
     const date = new Date(entry.date)
     const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
 
-    return [
-      formattedDate,
-      employee?.name || "Unknown",
-      employee?.department || "Unknown",
-      formatTime(entry.shiftStart),
-      formatTime(entry.shiftEnd),
-      formatTime(entry.break1Start),
-      formatTime(entry.break1End),
-      coverage1Employee?.name || "",
-      formatTime(entry.break2Start),
-      formatTime(entry.break2End),
-      coverage2Employee?.name || "",
-      formatTime(entry.outsideTherapyStart),
-      formatTime(entry.outsideTherapyEnd),
-      entry.outsideTherapyReason || "",
-      calculateTotalHours(entry),
-    ]
+    return {
+      Date: formattedDate,
+      Employee: employee?.name || "Unknown",
+      Department: employee?.department || "Unknown",
+      "Shift Start": formatTime(entry.shiftStart),
+      "Shift End": formatTime(entry.shiftEnd),
+      "Break 1 Start": formatTime(entry.break1Start),
+      "Break 1 End": formatTime(entry.break1End),
+      "Break 1 Coverage": coverage1Employee?.name || "",
+      "Break 2 Start": formatTime(entry.break2Start),
+      "Break 2 End": formatTime(entry.break2End),
+      "Break 2 Coverage": coverage2Employee?.name || "",
+      "Outside Therapy Start": formatTime(entry.outsideTherapyStart),
+      "Outside Therapy End": formatTime(entry.outsideTherapyEnd),
+      "Outside Therapy Reason": entry.outsideTherapyReason || "",
+      "Total Hours": calculateTotalHours(entry),
+    }
   })
 
   // Combine headers and rows
-  const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n")
+  const csvContent =
+    "data:text/csv;charset=utf-8," + [headers, ...rows.map(Object.values)].map((row) => row.join(",")).join("\n")
 
-  // Create and download the file
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+  const encodedUri = encodeURI(csvContent)
   const link = document.createElement("a")
-  const url = URL.createObjectURL(blob)
-
-  link.setAttribute("href", url)
+  link.setAttribute("href", encodedUri)
   link.setAttribute("download", `${filename}.csv`)
-  link.style.visibility = "hidden"
-
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

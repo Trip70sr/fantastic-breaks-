@@ -23,9 +23,16 @@ export interface BreakEntry {
   notes: string
 }
 
-export interface ShareableData {
-  employees: Employee[]
-  breakEntries: BreakEntry[]
-  generatedAt: string
-  expiresAt: string
+export type Department =
+  | "Sales"
+  | "Customer Service"
+  | "Operations"
+  | "Marketing"
+  | "IT"
+  | "Human Resources"
+  | "Finance"
+
+export interface CoverageStatus {
+  break1Status: "covered" | "missing" | "none"
+  break2Status: "covered" | "missing" | "none"
 }
