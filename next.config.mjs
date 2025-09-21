@@ -2,8 +2,6 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
-  skipTrailingSlashRedirect: true,
-  distDir: 'out',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -13,8 +11,8 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks' : '',
   basePath: process.env.NODE_ENV === 'production' ? '/fantastic-breaks' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks/' : '',
 }
 
 export default nextConfig

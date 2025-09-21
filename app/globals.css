@@ -290,11 +290,11 @@
 /* Animation for alerts */
 @keyframes pulse-red {
   0%,
-  100% {\
-    @apply bg-red-50;
+  100% {
+    background-color: hsl(195 100% 50%);
   }
-  50% {\
-    @apply bg-red-100;
+  50% {
+    background-color: hsl(195 100% 70%);
   }
 }
 
