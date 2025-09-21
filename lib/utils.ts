@@ -50,3 +50,36 @@ export function calculateBreakCoverage(breakEntries: any[], employees: any[]): n
 
   return totalBreaks === 0 ? 100 : Math.round((coveredBreaks / totalBreaks) * 100)
 }
+
+export function calculateShiftHours(startTime: string, endTime: string): number {
+  if (!startTime || !endTime) return 0
+
+  const [startHours, startMinutes] = startTime.split(":").map(Number)
+  const [endHours, endMinutes] = endTime.split(":").map(Number)
+
+  const startTotalMinutes = startHours * 60 + startMinutes
+  let endTotalMinutes = endHours * 60 + endMinutes
+
+  // Handle overnight shifts
+  if (endTotalMinutes < startTotalMinutes) {
+    endTotalMinutes += 24 * 60
+  }
+
+  const diffMinutes = endTotalMinutes - startTotalMinutes
+  return Math.round((diffMinutes / 60) * 100) / 100
+}
+
+export function formatShiftHours(hours: number): string {
+  if (hours === 0) return "0 hours"
+
+  const wholeHours = Math.floor(hours)
+  const minutes = Math.round((hours - wholeHours) * 60)
+
+  if (minutes === 0) {
+    return `${wholeHours} ${wholeHours === 1 ? "hour" : "hours"}`
+  } else if (wholeHours === 0) {
+    return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`
+  } else {
+    return `${wholeHours}h ${minutes}m`
+  }
+}

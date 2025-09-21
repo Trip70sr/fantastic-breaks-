@@ -3,13 +3,17 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/toaster"
+import { Toaster as Sonner } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Employee Break Management System",
-  description: "Manage employee break schedules and coverage efficiently",
+  description: "Manage employee breaks and coverage efficiently",
+  keywords: "employee, breaks, management, scheduling, coverage",
+  authors: [{ name: "Break Management Team" }],
+  viewport: "width=device-width, initial-scale=1",
     generator: 'v0.app'
 }
 
@@ -24,6 +28,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
           <Toaster />
+          <Sonner />
         </ThemeProvider>
       </body>
     </html>
