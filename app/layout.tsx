@@ -9,10 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Employee Break Management System",
-  description: "Manage employee breaks and coverage assignments efficiently",
-  keywords: ["employee", "breaks", "management", "coverage", "scheduling"],
-  authors: [{ name: "Employee Break System" }],
-  viewport: "width=device-width, initial-scale=1",
+  description: "Manage employee break schedules and coverage efficiently",
     generator: 'v0.app'
 }
 

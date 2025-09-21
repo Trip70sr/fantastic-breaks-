@@ -3,84 +3,47 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Download, Upload, Database, AlertCircle, FileText } from "lucide-react"
+import { Download, Upload, Database, FileText, AlertCircle, CheckCircle } from "lucide-react"
+import type { Employee, BreakEntry, BackupData } from "@/lib/types"
 import { toast } from "sonner"
 
 interface DataBackupRestoreProps {
-  isOpen: boolean
-  onClose: () => void
+  employees: Employee[]
+  breakEntries: BreakEntry[]
+  onDataRestore: (data: { employees: Employee[]; breakEntries: BreakEntry[] }) => void
 }
 
-export default function DataBackupRestore({ isOpen, onClose }: DataBackupRestoreProps) {
-  const [backupData, setBackupData] = useState("")
-  const [isRestoring, setIsRestoring] = useState(false)
+export function DataBackupRestore({ employees, breakEntries, onDataRestore }: DataBackupRestoreProps) {
+  const [importData, setImportData] = useState("")
+  const [isValidJson, setIsValidJson] = useState<boolean | null>(null)
 
-  const handleBackup = () => {
-    try {
-      const employees = JSON.parse(localStorage.getItem("employees") || "[]")
-      const breakEntries = JSON.parse(localStorage.getItem("breakEntries") || "[]")
-
-      const backup = {
-        version: "1.0",
-        timestamp: new Date().toISOString(),
-        data: {
-          employees,
-          breakEntries,
-        },
-        metadata: {
-          employeeCount: employees.length,
-          breakEntryCount: breakEntries.length,
-        },
-      }
-
-      const dataStr = JSON.stringify(backup, null, 2)
-      const dataBlob = new Blob([dataStr], { type: "application/json" })
-      const url = URL.createObjectURL(dataBlob)
-
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `employee-breaks-backup-${new Date().toISOString().split("T")[0]}.json`
-      link.click()
-
-      URL.revokeObjectURL(url)
-      toast.success("Backup created successfully")
-    } catch (error) {
-      toast.error("Failed to create backup")
-    }
-  }
-
-  const handleRestore = () => {
-    if (!backupData.trim()) {
-      toast.error("Please paste backup data first")
-      return
+  const handleExport = () => {
+    const backupData: BackupData = {
+      employees,
+      breakEntries,
+      exportDate: new Date().toISOString(),
+      version: "1.0",
     }
 
-    setIsRestoring(true)
-    try {
-      const backup = JSON.parse(backupData)
+    const dataStr = JSON.stringify(backupData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: "application/json" })
+    const url = URL.createObjectURL(dataBlob)
 
-      if (!backup.data || !backup.data.employees || !backup.data.breakEntries) {
-        throw new Error("Invalid backup format")
-      }
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `employee-break-backup-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
 
-      localStorage.setItem("employees", JSON.stringify(backup.data.employees))
-      localStorage.setItem("breakEntries", JSON.stringify(backup.data.breakEntries))
-
-      toast.success("Data restored successfully. Please refresh the page.")
-      setBackupData("")
-      onClose()
-    } catch (error) {
-      toast.error("Invalid backup data format")
-    } finally {
-      setIsRestoring(false)
-    }
+    toast.success("Data exported successfully")
   }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,185 +53,216 @@ export default function DataBackupRestore({ isOpen, onClose }: DataBackupRestore
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string
-      setBackupData(content)
+      setImportData(content)
+      validateJson(content)
     }
     reader.readAsText(file)
   }
 
-  const copyBackupToClipboard = () => {
+  const validateJson = (jsonString: string) => {
     try {
-      const employees = JSON.parse(localStorage.getItem("employees") || "[]")
-      const breakEntries = JSON.parse(localStorage.getItem("breakEntries") || "[]")
+      const data = JSON.parse(jsonString)
 
-      const backup = {
-        version: "1.0",
-        timestamp: new Date().toISOString(),
-        data: {
-          employees,
-          breakEntries,
-        },
-        metadata: {
-          employeeCount: employees.length,
-          breakEntryCount: breakEntries.length,
-        },
+      // Check if it has the required structure
+      if (data.employees && data.breakEntries && Array.isArray(data.employees) && Array.isArray(data.breakEntries)) {
+        setIsValidJson(true)
+      } else {
+        setIsValidJson(false)
       }
-
-      const dataStr = JSON.stringify(backup, null, 2)
-      navigator.clipboard.writeText(dataStr)
-      toast.success("Backup data copied to clipboard")
     } catch (error) {
-      toast.error("Failed to copy backup data")
+      setIsValidJson(false)
     }
   }
 
-  if (!isOpen) return null
+  const handleImport = () => {
+    if (!importData || !isValidJson) {
+      toast.error("Please provide valid backup data")
+      return
+    }
+
+    try {
+      const backupData: BackupData = JSON.parse(importData)
+
+      // Validate data structure
+      if (!backupData.employees || !backupData.breakEntries) {
+        throw new Error("Invalid backup format")
+      }
+
+      // Validate employees array
+      if (!Array.isArray(backupData.employees)) {
+        throw new Error("Employees data is not in correct format")
+      }
+
+      // Validate break entries array
+      if (!Array.isArray(backupData.breakEntries)) {
+        throw new Error("Break entries data is not in correct format")
+      }
+
+      // Restore the data
+      onDataRestore({
+        employees: backupData.employees,
+        breakEntries: backupData.breakEntries,
+      })
+
+      setImportData("")
+      setIsValidJson(null)
+      toast.success("Data imported successfully")
+    } catch (error) {
+      console.error("Import error:", error)
+      toast.error("Failed to import data. Please check the file format.")
+    }
+  }
+
+  const handleClearData = () => {
+    if (window.confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
+      localStorage.removeItem("employees")
+      localStorage.removeItem("breakEntries")
+      onDataRestore({ employees: [], breakEntries: [] })
+      toast.success("All data cleared")
+    }
+  }
+
+  const generateSampleData = () => {
+    const sampleData: BackupData = {
+      employees: [
+        {
+          id: "sample-1",
+          name: "John Doe",
+          email: "john.doe@company.com",
+          department: "Customer Service",
+          position: "Representative",
+          startDate: "2023-01-15",
+          isActive: true,
+        },
+      ],
+      breakEntries: [
+        {
+          id: "sample-break-1",
+          employeeId: "sample-1",
+          employeeName: "John Doe",
+          date: new Date().toISOString().split("T")[0],
+          break1Start: "10:00",
+          break1End: "10:15",
+          break1Coverage: "Jane Smith",
+          break2Start: "14:00",
+          break2End: "14:15",
+          break2Coverage: "Bob Johnson",
+          notes: "Regular schedule",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      exportDate: new Date().toISOString(),
+      version: "1.0",
+    }
+
+    setImportData(JSON.stringify(sampleData, null, 2))
+    setIsValidJson(true)
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
             Data Backup & Restore
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Current Data Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Current Data Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {JSON.parse(localStorage.getItem("employees") || "[]").length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Employees</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {JSON.parse(localStorage.getItem("breakEntries") || "[]").length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Break Entries</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Backup Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          </CardTitle>
+          <CardDescription>Export your data for backup or import data from a previous backup</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Export Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Export Data</h3>
+            <p className="text-sm text-muted-foreground">
+              Download all employee and break entry data as a JSON file for backup purposes.
+            </p>
+            <div className="flex items-center gap-4">
+              <Button onClick={handleExport} className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
-                Create Backup
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Download a complete backup of your employee and break entry data.
-              </p>
-              <div className="flex gap-2">
-                <Button onClick={handleBackup} className="flex items-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Download Backup File
+                Export Data
+              </Button>
+              <div className="text-sm text-muted-foreground">
+                {employees.length} employees, {breakEntries.length} break entries
+              </div>
+            </div>
+          </div>
+
+          {/* Import Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Import Data</h3>
+            <p className="text-sm text-muted-foreground">
+              Upload a backup file to restore your data. This will replace all current data.
+            </p>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="file-upload">Upload Backup File</Label>
+                <Input id="file-upload" type="file" accept=".json" onChange={handleFileUpload} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="json-data">Or Paste JSON Data</Label>
+                <Textarea
+                  id="json-data"
+                  placeholder="Paste your backup JSON data here..."
+                  value={importData}
+                  onChange={(e) => {
+                    setImportData(e.target.value)
+                    validateJson(e.target.value)
+                  }}
+                  rows={10}
+                  className="font-mono text-sm"
+                />
+              </div>
+
+              {isValidJson !== null && (
+                <Alert className={isValidJson ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+                  <div className="flex items-center gap-2">
+                    {isValidJson ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <AlertDescription className={isValidJson ? "text-green-700" : "text-red-700"}>
+                      {isValidJson
+                        ? "Valid backup data format detected"
+                        : "Invalid JSON format or missing required fields"}
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Button onClick={handleImport} disabled={!isValidJson} className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Import Data
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={copyBackupToClipboard}
+                  onClick={generateSampleData}
                   className="flex items-center gap-2 bg-transparent"
                 >
                   <FileText className="h-4 w-4" />
-                  Copy to Clipboard
+                  Load Sample Data
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Restore Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Restore from Backup
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Warning:</strong> Restoring from backup will completely replace all current data. This action
-                  cannot be undone.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="backup-file">Upload Backup File</Label>
-                  <Input id="backup-file" type="file" accept=".json" onChange={handleFileUpload} className="mt-1" />
-                </div>
-
-                <div>
-                  <Label htmlFor="backup-data">Or Paste Backup Data</Label>
-                  <Textarea
-                    id="backup-data"
-                    placeholder="Paste your backup JSON data here..."
-                    value={backupData}
-                    onChange={(e) => setBackupData(e.target.value)}
-                    rows={8}
-                    className="mt-1 font-mono text-sm"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleRestore}
-                  disabled={!backupData.trim() || isRestoring}
-                  className="w-full"
-                  variant="destructive"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {isRestoring ? "Restoring..." : "Restore Data"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Instructions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <div>
-                <strong>To create a backup:</strong>
-                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
-                  <li>Click "Download Backup File" to save a JSON file to your computer</li>
-                  <li>Or click "Copy to Clipboard" to copy the backup data</li>
-                  <li>Store the backup file in a safe location</li>
-                </ol>
-              </div>
-              <div>
-                <strong>To restore from backup:</strong>
-                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
-                  <li>Upload a backup file or paste the backup data</li>
-                  <li>Click "Restore Data" to replace all current data</li>
-                  <li>Refresh the page to see the restored data</li>
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          {/* Clear Data Section */}
+          <div className="space-y-4 pt-6 border-t">
+            <h3 className="text-lg font-semibold text-red-600">Danger Zone</h3>
+            <p className="text-sm text-muted-foreground">
+              Permanently delete all data from the application. This action cannot be undone.
+            </p>
+            <Button variant="destructive" onClick={handleClearData} className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Clear All Data
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

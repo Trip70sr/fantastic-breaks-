@@ -139,7 +139,11 @@
 
 /* Coverage alert styles */
 .coverage-alert {
-  @apply bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800;
+  @apply bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800;
+}
+
+.coverage-alert td {
+  @apply text-red-900 dark:text-red-100;
 }
 
 .coverage-alert-text {

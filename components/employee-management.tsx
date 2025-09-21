@@ -1,344 +1,409 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Edit, Trash2, Users } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Edit, Plus, Trash2, User, Mail, Building, Calendar } from "lucide-react"
+import type { Employee } from "@/lib/types"
+import { departments, positions } from "@/lib/data"
 import { toast } from "sonner"
-import { generateId } from "@/lib/utils"
-import type { Employee, Department } from "@/lib/types"
 
 interface EmployeeManagementProps {
-  isOpen: boolean
-  onClose: () => void
   employees: Employee[]
-  onUpdateEmployees: (employees: Employee[]) => void
+  onEmployeeUpdate: (employees: Employee[]) => void
 }
 
-export default function EmployeeManagement({ isOpen, onClose, employees, onUpdateEmployees }: EmployeeManagementProps) {
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
+export function EmployeeManagement({ employees, onEmployeeUpdate }: EmployeeManagementProps) {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
-  const [formData, setFormData] = useState({
-    name: "",
-    department: "" as Department,
-    isActive: true,
-    workingToday: false,
-  })
-
-  const departments: Department[] = ["RBT", "Operations", "BCBA", "Floater"]
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      department: "" as Department,
-      isActive: true,
-      workingToday: false,
-    })
-  }
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [formData, setFormData] = useState<Partial<Employee>>({})
 
   const handleAdd = () => {
-    if (!formData.name.trim() || !formData.department) {
-      toast.error("Please fill in all required fields")
-      return
-    }
-
-    const newEmployee: Employee = {
-      id: generateId(),
-      name: formData.name.trim(),
-      department: formData.department,
-      position: "", // Not used in current implementation
-      email: "", // Not used in current implementation
-      phone: "", // Not used in current implementation
-      hireDate: "", // Not used in current implementation
-      status: "active", // Not used in current implementation
-      isActive: formData.isActive,
-      workingToday: formData.workingToday,
-    }
-
-    onUpdateEmployees([...employees, newEmployee])
-    setShowAddDialog(false)
-    resetForm()
-    toast.success("Employee added successfully")
+    setFormData({
+      name: "",
+      email: "",
+      department: "",
+      position: "",
+      startDate: new Date().toISOString().split("T")[0],
+      isActive: true,
+    })
+    setIsAddDialogOpen(true)
   }
 
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee)
-    setFormData({
-      name: employee.name,
-      department: employee.department,
-      isActive: employee.isActive || true,
-      workingToday: employee.workingToday || false,
-    })
-    setShowEditDialog(true)
+    setFormData({ ...employee })
+    setIsEditDialogOpen(true)
   }
 
-  const handleUpdate = () => {
-    if (!editingEmployee) return
+  const handleDelete = (id: string) => {
+    const updatedEmployees = employees.filter((emp) => emp.id !== id)
+    onEmployeeUpdate(updatedEmployees)
+    toast.success("Employee deleted successfully")
+  }
 
-    if (!formData.name.trim() || !formData.department) {
+  const handleSave = () => {
+    if (!formData.name || !formData.email || !formData.department || !formData.position) {
       toast.error("Please fill in all required fields")
       return
     }
 
-    const updatedEmployee: Employee = {
-      ...editingEmployee,
-      name: formData.name.trim(),
-      department: formData.department,
-      isActive: formData.isActive,
-      workingToday: formData.workingToday,
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address")
+      return
     }
 
-    const updatedEmployees = employees.map((emp) => (emp.id === editingEmployee.id ? updatedEmployee : emp))
+    // Check for duplicate email (excluding current employee if editing)
+    const duplicateEmail = employees.find((emp) => emp.email === formData.email && emp.id !== editingEmployee?.id)
+    if (duplicateEmail) {
+      toast.error("An employee with this email already exists")
+      return
+    }
 
-    onUpdateEmployees(updatedEmployees)
-    setShowEditDialog(false)
+    if (editingEmployee) {
+      // Update existing employee
+      const updatedEmployees = employees.map((emp) =>
+        emp.id === editingEmployee.id ? ({ ...formData, id: editingEmployee.id } as Employee) : emp,
+      )
+      onEmployeeUpdate(updatedEmployees)
+      toast.success("Employee updated successfully")
+    } else {
+      // Add new employee
+      const newEmployee: Employee = {
+        ...formData,
+        id: Date.now().toString(),
+      } as Employee
+
+      onEmployeeUpdate([...employees, newEmployee])
+      toast.success("Employee added successfully")
+    }
+
+    setIsAddDialogOpen(false)
+    setIsEditDialogOpen(false)
     setEditingEmployee(null)
-    resetForm()
-    toast.success("Employee updated successfully")
+    setFormData({})
   }
 
-  const handleDelete = (employeeId: string) => {
-    const updatedEmployees = employees.filter((emp) => emp.id !== employeeId)
-    onUpdateEmployees(updatedEmployees)
-    toast.success("Employee deleted successfully")
+  const handleCancel = () => {
+    setIsAddDialogOpen(false)
+    setIsEditDialogOpen(false)
+    setEditingEmployee(null)
+    setFormData({})
   }
 
-  const getDepartmentStats = () => {
-    return departments.map((dept) => ({
-      department: dept,
-      total: employees.filter((emp) => emp.department === dept).length,
-      active: employees.filter((emp) => emp.department === dept && emp.isActive).length,
-      workingToday: employees.filter((emp) => emp.department === dept && emp.workingToday).length,
-    }))
+  const toggleEmployeeStatus = (id: string) => {
+    const updatedEmployees = employees.map((emp) => (emp.id === id ? { ...emp, isActive: !emp.isActive } : emp))
+    onEmployeeUpdate(updatedEmployees)
+    toast.success("Employee status updated")
   }
-
-  if (!isOpen) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Employee Management
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Department Stats */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {getDepartmentStats().map((stat) => (
-              <Card key={stat.department}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">{stat.department}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.total}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {stat.active} active • {stat.workingToday} working today
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Employee Management</CardTitle>
+            <CardDescription>Manage employee information and status</CardDescription>
           </div>
-
-          {/* Employee Table */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Employees ({employees.length})</h3>
-              <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Employee
-              </Button>
-            </div>
-
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Working Today</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{employee.department}</Badge>
-                      </TableCell>
-                      <TableCell>
+          <Button onClick={handleAdd}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Employee
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {employees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    No employees found. Click "Add Employee" to get started.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                employees.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        {employee.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        {employee.email}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-muted-foreground" />
+                        {employee.department}
+                      </div>
+                    </TableCell>
+                    <TableCell>{employee.position}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {new Date(employee.startDate).toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={employee.isActive} onCheckedChange={() => toggleEmployeeStatus(employee.id)} />
                         <Badge variant={employee.isActive ? "default" : "secondary"}>
                           {employee.isActive ? "Active" : "Inactive"}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={employee.workingToday ? "default" : "outline"}>
-                          {employee.workingToday ? "Yes" : "No"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(employee)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(employee.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {employees.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No employees found. Click "Add Employee" to get started.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(employee)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(employee.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-
-        {/* Add Employee Dialog */}
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent>
+        {/* Add Dialog */}
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add New Employee</DialogTitle>
+              <DialogTitle>Add Employee</DialogTitle>
+              <DialogDescription>Add a new employee to the system.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="Employee name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter full name"
+                    value={formData.name || ""}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter email address"
+                    value={formData.email || ""}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department *</Label>
-                <Select
-                  value={formData.department}
-                  onValueChange={(value: Department) => setFormData({ ...formData, department: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department *</Label>
+                  <Select
+                    value={formData.department || ""}
+                    onValueChange={(value) => setFormData({ ...formData, department: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position *</Label>
+                  <Select
+                    value={formData.position || ""}
+                    onValueChange={(value) => setFormData({ ...formData, position: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {pos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                />
-                <Label htmlFor="isActive">Active Employee</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="workingToday"
-                  checked={formData.workingToday}
-                  onCheckedChange={(checked) => setFormData({ ...formData, workingToday: checked })}
-                />
-                <Label htmlFor="workingToday">Working Today</Label>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date *</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate || ""}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="isActive">Status</Label>
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Switch
+                      id="isActive"
+                      checked={formData.isActive ?? true}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                    />
+                    <Label htmlFor="isActive">{formData.isActive ? "Active" : "Inactive"}</Label>
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button onClick={handleAdd}>Add Employee</Button>
+              <Button onClick={handleSave}>Add Employee</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Edit Employee Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent>
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Edit Employee</DialogTitle>
+              <DialogDescription>Update employee information for {editingEmployee?.name}.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Name *</Label>
-                <Input
-                  id="edit-name"
-                  placeholder="Employee name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter full name"
+                    value={formData.name || ""}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter email address"
+                    value={formData.email || ""}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-department">Department *</Label>
-                <Select
-                  value={formData.department}
-                  onValueChange={(value: Department) => setFormData({ ...formData, department: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department *</Label>
+                  <Select
+                    value={formData.department || ""}
+                    onValueChange={(value) => setFormData({ ...formData, department: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position *</Label>
+                  <Select
+                    value={formData.position || ""}
+                    onValueChange={(value) => setFormData({ ...formData, position: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {pos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edit-isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                />
-                <Label htmlFor="edit-isActive">Active Employee</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edit-workingToday"
-                  checked={formData.workingToday}
-                  onCheckedChange={(checked) => setFormData({ ...formData, workingToday: checked })}
-                />
-                <Label htmlFor="edit-workingToday">Working Today</Label>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date *</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate || ""}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="isActive">Status</Label>
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Switch
+                      id="isActive"
+                      checked={formData.isActive ?? true}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                    />
+                    <Label htmlFor="isActive">{formData.isActive ? "Active" : "Inactive"}</Label>
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button onClick={handleUpdate}>Update Employee</Button>
+              <Button onClick={handleSave}>Update Employee</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   )
 }

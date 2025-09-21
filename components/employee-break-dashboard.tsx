@@ -3,97 +3,136 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Users, Clock, AlertCircle, Calendar, Moon, Sun, BarChart3, UserPlus, Download, Mail } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { BreakTimesheetTable } from "./break-timesheet-table"
+import { EmployeeManagement } from "./employee-management"
+import { DataBackupRestore } from "./data-backup-restore"
+import { EmailSharing } from "./email-sharing"
+import { Users, Calendar, AlertCircle, Moon, Sun, Settings } from "lucide-react"
 import { useTheme } from "next-themes"
-import BreakTimesheetTable from "./break-timesheet-table"
-import EmployeeManagement from "./employee-management"
-import DataBackupRestore from "./data-backup-restore"
-import EmailSharing from "./email-sharing"
-import { employees, breakEntries, getEmployeeName, hasMissingCoverage } from "@/lib/data"
-import type { Employee, BreakEntry } from "@/lib/types"
+import type { Employee, BreakEntry, CoverageAlert } from "@/lib/types"
+import { mockEmployees, mockBreakEntries } from "@/lib/data"
+import { toast } from "sonner"
 
-export default function EmployeeBreakDashboard() {
+export function EmployeeBreakDashboard() {
   const { theme, setTheme } = useTheme()
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
+  const [coverageAlerts, setCoverageAlerts] = useState<CoverageAlert[]>([])
   const [mounted, setMounted] = useState(false)
-  const [employeeList, setEmployeeList] = useState<Employee[]>(employees)
-  const [breakList, setBreakList] = useState<BreakEntry[]>(breakEntries)
-  const [showEmployeeManagement, setShowEmployeeManagement] = useState(false)
-  const [showDataBackup, setShowDataBackup] = useState(false)
-  const [showEmailSharing, setShowEmailSharing] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    // Load data from localStorage if available
-    const savedEmployees = localStorage.getItem("employees")
-    const savedBreakEntries = localStorage.getItem("breakEntries")
-
-    if (savedEmployees) {
-      setEmployeeList(JSON.parse(savedEmployees))
-    }
-    if (savedBreakEntries) {
-      setBreakList(JSON.parse(savedBreakEntries))
-    }
+    loadData()
   }, [])
 
   useEffect(() => {
-    // Save to localStorage whenever data changes
-    localStorage.setItem("employees", JSON.stringify(employeeList))
-    localStorage.setItem("breakEntries", JSON.stringify(breakList))
-  }, [employeeList, breakList])
+    if (mounted) {
+      generateCoverageAlerts()
+    }
+  }, [breakEntries, mounted])
 
-  if (!mounted) {
-    return null
+  const loadData = () => {
+    try {
+      const savedEmployees = localStorage.getItem("employees")
+      const savedBreakEntries = localStorage.getItem("breakEntries")
+
+      if (savedEmployees) {
+        setEmployees(JSON.parse(savedEmployees))
+      } else {
+        setEmployees(mockEmployees)
+        localStorage.setItem("employees", JSON.stringify(mockEmployees))
+      }
+
+      if (savedBreakEntries) {
+        setBreakEntries(JSON.parse(savedBreakEntries))
+      } else {
+        setBreakEntries(mockBreakEntries)
+        localStorage.setItem("breakEntries", JSON.stringify(mockBreakEntries))
+      }
+    } catch (error) {
+      console.error("Error loading data:", error)
+      setEmployees(mockEmployees)
+      setBreakEntries(mockBreakEntries)
+      toast.error("Error loading data, using defaults")
+    }
   }
 
-  const today = new Date().toISOString().split("T")[0]
-  const todayEntries = breakList.filter((entry) => entry.date === today)
-  const workingToday = employeeList.filter((emp) => emp.workingToday).length
-  const entriesWithMissingCoverage = todayEntries.filter(hasMissingCoverage)
-  const totalBreaksToday = todayEntries.reduce((acc, entry) => {
-    let count = 0
-    if (entry.break1Start && entry.break1End) count++
-    if (entry.break2Start && entry.break2End) count++
-    return acc + count
-  }, 0)
+  const generateCoverageAlerts = () => {
+    const alerts: CoverageAlert[] = []
 
-  const stats = [
-    {
-      title: "Total Employees",
-      value: employeeList.length,
-      icon: Users,
-      color: "text-blue-600",
-    },
-    {
-      title: "Working Today",
-      value: workingToday,
-      icon: Calendar,
-      color: "text-green-600",
-    },
-    {
-      title: "Breaks Today",
-      value: totalBreaksToday,
-      icon: Clock,
-      color: "text-purple-600",
-    },
-    {
-      title: "Missing Coverage",
-      value: entriesWithMissingCoverage.length,
-      icon: AlertCircle,
-      color: "text-red-600",
-    },
-  ]
+    breakEntries.forEach((entry) => {
+      // Check break 1 coverage
+      if (entry.break1Start && entry.break1End && !entry.break1Coverage.trim()) {
+        alerts.push({
+          id: `${entry.id}-break1`,
+          employeeId: entry.employeeId,
+          employeeName: entry.employeeName,
+          date: entry.date,
+          breakNumber: 1,
+          startTime: entry.break1Start,
+          endTime: entry.break1End,
+          message: `Break 1 (${entry.break1Start} - ${entry.break1End}) has no coverage assigned`,
+          severity: "error",
+        })
+      }
+
+      // Check break 2 coverage
+      if (entry.break2Start && entry.break2End && !entry.break2Coverage.trim()) {
+        alerts.push({
+          id: `${entry.id}-break2`,
+          employeeId: entry.employeeId,
+          employeeName: entry.employeeName,
+          date: entry.date,
+          breakNumber: 2,
+          startTime: entry.break2Start,
+          endTime: entry.break2End,
+          message: `Break 2 (${entry.break2Start} - ${entry.break2End}) has no coverage assigned`,
+          severity: "error",
+        })
+      }
+    })
+
+    setCoverageAlerts(alerts)
+  }
+
+  const handleEmployeeUpdate = (updatedEmployees: Employee[]) => {
+    setEmployees(updatedEmployees)
+    localStorage.setItem("employees", JSON.stringify(updatedEmployees))
+  }
+
+  const handleBreakEntryUpdate = (updatedEntries: BreakEntry[]) => {
+    setBreakEntries(updatedEntries)
+    localStorage.setItem("breakEntries", JSON.stringify(updatedEntries))
+  }
+
+  const handleDataRestore = (data: { employees: Employee[]; breakEntries: BreakEntry[] }) => {
+    setEmployees(data.employees)
+    setBreakEntries(data.breakEntries)
+    localStorage.setItem("employees", JSON.stringify(data.employees))
+    localStorage.setItem("breakEntries", JSON.stringify(data.breakEntries))
+    toast.success("Data restored successfully")
+  }
+
+  const activeEmployees = employees.filter((emp) => emp.isActive)
+  const todayEntries = breakEntries.filter((entry) => entry.date === new Date().toISOString().split("T")[0])
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6 space-y-6">
-        {/* Header */}
+      <div className="container mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Employee Break Management</h1>
-            <p className="text-muted-foreground">Manage employee breaks and coverage assignments</p>
+            <p className="text-muted-foreground">Manage employee break schedules and coverage</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
@@ -102,198 +141,119 @@ export default function EmployeeBreakDashboard() {
           </div>
         </div>
 
-        {/* Coverage Alerts */}
-        {entriesWithMissingCoverage.length > 0 && (
-          <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-700 dark:text-red-300">
-              <strong>Coverage Alert:</strong> {entriesWithMissingCoverage.length} break(s) are missing coverage
-              assignments.
-              {entriesWithMissingCoverage.map((entry, index) => (
-                <span key={entry.id}>
-                  {index > 0 && ", "}
-                  {getEmployeeName(entry.employeeId)}
-                </span>
-              ))}
-            </AlertDescription>
-          </Alert>
-        )}
-
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                {stat.title === "Missing Coverage" && stat.value > 0 && (
-                  <Badge variant="destructive" className="mt-1">
-                    Needs Attention
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{activeEmployees.length}</div>
+              <p className="text-xs text-muted-foreground">{employees.length - activeEmployees.length} inactive</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Breaks</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{todayEntries.length}</div>
+              <p className="text-xs text-muted-foreground">Scheduled for today</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Coverage Alerts</CardTitle>
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{coverageAlerts.length}</div>
+              <p className="text-xs text-muted-foreground">Require attention</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Entries</CardTitle>
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{breakEntries.length}</div>
+              <p className="text-xs text-muted-foreground">All time records</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="timesheet" className="space-y-4">
+        {/* Coverage Alerts */}
+        {coverageAlerts.length > 0 && (
+          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                <AlertCircle className="h-5 w-5" />
+                Coverage Alerts ({coverageAlerts.length})
+              </CardTitle>
+              <CardDescription className="text-red-600 dark:text-red-400">
+                The following breaks need coverage assignments:
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {coverageAlerts.slice(0, 5).map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="flex items-center justify-between p-2 bg-white dark:bg-red-900/20 rounded border"
+                  >
+                    <div>
+                      <span className="font-medium">{alert.employeeName}</span>
+                      <span className="text-sm text-muted-foreground ml-2">
+                        Break {alert.breakNumber} on {new Date(alert.date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <Badge variant="destructive">No Coverage</Badge>
+                  </div>
+                ))}
+                {coverageAlerts.length > 5 && (
+                  <p className="text-sm text-muted-foreground">And {coverageAlerts.length - 5} more alerts...</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Tabs */}
+        <Tabs defaultValue="schedule" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="timesheet">Break Timesheet</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="schedule">Break Schedule</TabsTrigger>
             <TabsTrigger value="employees">Employees</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="sharing">Email Sharing</TabsTrigger>
+            <TabsTrigger value="data">Data Management</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="timesheet" className="space-y-4">
+          <TabsContent value="schedule" className="space-y-4">
             <BreakTimesheetTable
-              employees={employeeList}
-              breakEntries={breakList}
-              onUpdateBreakEntries={setBreakList}
+              employees={employees}
+              breakEntries={breakEntries}
+              onBreakEntryUpdate={handleBreakEntryUpdate}
+              coverageAlerts={coverageAlerts}
             />
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Department Breakdown
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {["RBT", "Operations", "BCBA", "Floater"].map((dept) => {
-                      const deptEmployees = employeeList.filter((emp) => emp.department === dept)
-                      const workingCount = deptEmployees.filter((emp) => emp.workingToday).length
-                      return (
-                        <div key={dept} className="flex items-center justify-between">
-                          <span className="font-medium">{dept}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">
-                              {workingCount}/{deptEmployees.length}
-                            </span>
-                            <Badge variant="outline">{deptEmployees.length} total</Badge>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Today's Coverage Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span>Fully Covered</span>
-                      <Badge className="bg-green-100 text-green-800">
-                        {todayEntries.filter((entry) => !hasMissingCoverage(entry)).length}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Missing Coverage</span>
-                      <Badge variant="destructive">{entriesWithMissingCoverage.length}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Total Breaks</span>
-                      <Badge variant="outline">{totalBreaksToday}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
           <TabsContent value="employees" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Employee Management</h3>
-                <p className="text-sm text-muted-foreground">Manage employee information and departments</p>
-              </div>
-              <Button onClick={() => setShowEmployeeManagement(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Manage Employees
-              </Button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {employeeList.map((employee) => (
-                <Card key={employee.id}>
-                  <CardHeader>
-                    <CardTitle className="text-base">{employee.name}</CardTitle>
-                    <CardDescription>{employee.department}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <Badge variant={employee.isActive ? "default" : "secondary"}>
-                        {employee.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                      <Badge variant={employee.workingToday ? "default" : "outline"}>
-                        {employee.workingToday ? "Working Today" : "Off Today"}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <EmployeeManagement employees={employees} onEmployeeUpdate={handleEmployeeUpdate} />
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Download className="h-5 w-5" />
-                    Data Management
-                  </CardTitle>
-                  <CardDescription>Backup and restore your employee and break data</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={() => setShowDataBackup(true)} className="w-full">
-                    Open Data Manager
-                  </Button>
-                </CardContent>
-              </Card>
+          <TabsContent value="sharing" className="space-y-4">
+            <EmailSharing employees={employees} breakEntries={breakEntries} />
+          </TabsContent>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" />
-                    Email Sharing
-                  </CardTitle>
-                  <CardDescription>Share break schedules via email or generate shareable links</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={() => setShowEmailSharing(true)} className="w-full">
-                    Open Email Sharing
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+          <TabsContent value="data" className="space-y-4">
+            <DataBackupRestore employees={employees} breakEntries={breakEntries} onDataRestore={handleDataRestore} />
           </TabsContent>
         </Tabs>
-
-        {/* Modals */}
-        {showEmployeeManagement && (
-          <EmployeeManagement
-            isOpen={showEmployeeManagement}
-            onClose={() => setShowEmployeeManagement(false)}
-            employees={employeeList}
-            onUpdateEmployees={setEmployeeList}
-          />
-        )}
-
-        {showDataBackup && <DataBackupRestore isOpen={showDataBackup} onClose={() => setShowDataBackup(false)} />}
-
-        {showEmailSharing && <EmailSharing isOpen={showEmailSharing} onClose={() => setShowEmailSharing(false)} />}
       </div>
     </div>
   )

@@ -3,43 +3,27 @@ export type Department = "RBT" | "Operations" | "BCBA" | "Floater"
 export interface Employee {
   id: string
   name: string
-  department: Department
-  position: string
   email: string
-  phone: string
-  hireDate: string
-  status: "active" | "inactive"
-  avatar?: string
-  isActive?: boolean
-  workingToday?: boolean
+  department: string
+  position: string
+  startDate: string
+  isActive: boolean
 }
 
 export interface BreakEntry {
   id: string
   employeeId: string
+  employeeName: string
   date: string
-  breakType: "lunch" | "break" | "personal"
-  startTime: string
-  endTime: string
-  duration: number // in minutes
-  notes: string
-  location?: string
-  approved: boolean
-  approvedBy?: string
-  approvedAt?: string
   break1Start: string
   break1End: string
   break1Coverage: string
   break2Start: string
   break2End: string
   break2Coverage: string
-  coverageEmployeeId?: string
-  coverage2EmployeeId?: string
-  shiftStart?: string
-  shiftEnd?: string
-  outsideTherapyStart?: string
-  outsideTherapyEnd?: string
-  outsideTherapyReason?: string
+  notes: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CoverageEntry {
@@ -54,6 +38,18 @@ export interface CoverageEntry {
   department: string
   status: "scheduled" | "completed" | "missed" | "partial"
   notes?: string
+}
+
+export interface CoverageAlert {
+  id: string
+  employeeId: string
+  employeeName: string
+  date: string
+  breakNumber: 1 | 2
+  startTime: string
+  endTime: string
+  message: string
+  severity: "warning" | "error"
 }
 
 export interface DepartmentStats {
@@ -92,6 +88,34 @@ export interface FilterOptions {
   employees: string[]
   breakTypes: string[]
   approved?: boolean
+}
+
+export interface SharedBreakData {
+  employeeName: string
+  date: string
+  break1Start: string
+  break1End: string
+  break1Coverage: string
+  break2Start: string
+  break2End: string
+  break2Coverage: string
+  notes: string
+  expiresAt: string
+  token: string
+}
+
+export interface BackupData {
+  employees: Employee[]
+  breakEntries: BreakEntry[]
+  exportDate: string
+  version: string
+}
+
+export interface EmailTemplate {
+  subject: string
+  body: string
+  recipientEmail: string
+  shareUrl: string
 }
 
 export interface ShareableLink {
