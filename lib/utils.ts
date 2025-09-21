@@ -7,11 +7,81 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatTime(time: string): string {
   if (!time) return ""
-  const [hours, minutes] = time.split(":")
-  const hour = Number.parseInt(hours, 10)
-  const ampm = hour >= 12 ? "PM" : "AM"
-  const displayHour = hour % 12 || 12
-  return `${displayHour}:${minutes} ${ampm}`
+  const [hours, minutes] = time.split(":").map(Number)
+  const period = hours >= 12 ? "PM" : "AM"
+  const displayHours = hours % 12 || 12
+  return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
+}
+
+export function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
+export function generateShareToken(): string {
+  return Math.random().toString(36).substr(2, 16)
+}
+
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function calculateBreakCoverage(breakEntries: any[], employees: any[]): number {
+  if (breakEntries.length === 0) return 100
+
+  let totalBreaks = 0
+  let coveredBreaks = 0
+
+  breakEntries.forEach((entry) => {
+    if (entry.break1Start && entry.break1End) {
+      totalBreaks++
+      if (entry.break1Coverage) coveredBreaks++
+    }
+    if (entry.break2Start && entry.break2End) {
+      totalBreaks++
+      if (entry.break2Coverage) coveredBreaks++
+    }
+  })
+
+  return totalBreaks === 0 ? 100 : Math.round((coveredBreaks / totalBreaks) * 100)
+}
+
+export function calculateShiftHours(startTime: string, endTime: string): number {
+  if (!startTime || !endTime) return 0
+
+  const [startHours, startMinutes] = startTime.split(":").map(Number)
+  const [endHours, endMinutes] = endTime.split(":").map(Number)
+
+  const startTotalMinutes = startHours * 60 + startMinutes
+  let endTotalMinutes = endHours * 60 + endMinutes
+
+  // Handle overnight shifts
+  if (endTotalMinutes < startTotalMinutes) {
+    endTotalMinutes += 24 * 60
+  }
+
+  const diffMinutes = endTotalMinutes - startTotalMinutes
+  return Math.round((diffMinutes / 60) * 100) / 100
+}
+
+export function formatShiftHours(hours: number): string {
+  if (hours === 0) return "0 hours"
+
+  const wholeHours = Math.floor(hours)
+  const minutes = Math.round((hours - wholeHours) * 60)
+
+  if (minutes === 0) {
+    return `${wholeHours} ${wholeHours === 1 ? "hour" : "hours"}`
+  } else if (wholeHours === 0) {
+    return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`
+  } else {
+    return `${wholeHours}h ${minutes}m`
+  }
 }
 
 export function calculateBreakDuration(start: string, end: string): number {
@@ -39,34 +109,6 @@ export function isBreakTimeConflict(
 
 export function generateId(): string {
   return Math.random().toString(36).substr(2, 9)
-}
-
-export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
-}
-
-export function calculateShiftHours(shiftStart: string, shiftEnd: string): number {
-  if (!shiftStart || !shiftEnd) return 0
-  const start = new Date(`2000-01-01T${shiftStart}:00`)
-  const end = new Date(`2000-01-01T${shiftEnd}:00`)
-  return (end.getTime() - start.getTime()) / (1000 * 60 * 60) // hours
-}
-
-export function formatShiftHours(hours: number): string {
-  if (hours === 0) return "0 hours"
-  const wholeHours = Math.floor(hours)
-  const minutes = Math.round((hours - wholeHours) * 60)
-
-  if (minutes === 0) {
-    return `${wholeHours} hour${wholeHours !== 1 ? "s" : ""}`
-  }
-
-  return `${wholeHours}h ${minutes}m`
 }
 
 export function isValidTimeFormat(time: string): boolean {
