@@ -4,11 +4,9 @@ export interface Employee {
   id: string
   name: string
   department: string
-  position: string
   email: string
-  phone: string
-  hireDate: string
   isActive: boolean
+  createdAt: string
 }
 
 export interface BreakEntry {
@@ -42,13 +40,12 @@ export interface CoverageEntry {
 
 export interface CoverageAlert {
   id: string
-  employeeId: string
-  employeeName: string
   date: string
-  breakNumber: 1 | 2
-  breakTime: string
-  severity: "high" | "medium" | "low"
-  message: string
+  timeSlot: string
+  employeesCount: number
+  coverageCount: number
+  missingCoverage: number
+  severity: "low" | "medium" | "high"
 }
 
 export interface DepartmentStats {
