@@ -15,8 +15,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks-' : '',
-  basePath: process.env.NODE_ENV === 'production' ? '/fantastic-breaks-' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/fantastic-breaks' : '',
   experimental: {
     esmExternals: 'loose'
   }
