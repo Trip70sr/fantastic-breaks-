@@ -11,6 +11,9 @@ export const initialEmployees: Employee[] = [
   { id: "8", name: "James Wilson", department: "Operations" },
 ]
 
+// Also export as 'employees' for compatibility
+export const employees = initialEmployees
+
 export const initialBreakEntries: BreakEntry[] = [
   {
     id: "1",
@@ -68,6 +71,9 @@ export const initialBreakEntries: BreakEntry[] = [
     coverageEmployeeId: "",
   },
 ]
+
+// Also export as 'breakEntries' for compatibility
+export const breakEntries = initialBreakEntries
 
 // Load functions for localStorage integration
 export function loadEmployees(): Employee[] {
@@ -205,4 +211,15 @@ export function getCoverageIssues(entry: BreakEntry): string[] {
   }
 
   return issues
+}
+
+// Helper function to get coverage status for display
+export const getCoverageStatus = (entry: BreakEntry) => {
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+
+  const break1Status = hasBreak1 ? (entry.coverageEmployeeId ? "covered" : "missing") : "none"
+  const break2Status = hasBreak2 ? (entry.coverage2EmployeeId ? "covered" : "missing") : "none"
+
+  return { break1Status, break2Status }
 }

@@ -2,13 +2,17 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import PrivacyBanner from "@/components/privacy-banner"
+import GoogleAnalytics from "@/components/google-analytics"
+import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Break Management",
-  description: "Manage employee break schedules and coverage assignments",
+  title: "Employee Break Management System",
+  description: "Manage employee breaks and coverage efficiently",
     generator: 'v0.app'
 }
 
@@ -18,22 +22,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <GoogleAnalytics />
+      </head>
       <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          <header className="bg-white shadow-sm border-b">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center py-6">
-                <div className="flex items-center">
-                  <h1 className="text-2xl font-bold text-gray-900">Employee Break Management</h1>
-                </div>
-                <div className="text-sm text-gray-500">{new Date().toLocaleDateString()}</div>
-              </div>
-            </div>
-          </header>
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
-        </div>
-        <Toaster />
+        <Suspense fallback={null}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            {children}
+            <Toaster />
+            <PrivacyBanner />
+          </ThemeProvider>
+        </Suspense>
       </body>
     </html>
   )

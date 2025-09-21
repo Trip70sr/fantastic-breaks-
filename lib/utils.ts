@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { BreakEntry, Employee } from "./types"
+import type { Employee, BreakEntry } from "./types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -15,93 +15,36 @@ export function formatTime(time: string): string {
   return `${displayHour}:${minutes} ${ampm}`
 }
 
-export function calculateBreakDuration(startTime: string, endTime: string): number {
+export function calculateShiftHours(startTime: string, endTime: string): number {
   if (!startTime || !endTime) return 0
 
-  const start = new Date(`2000-01-01T${startTime}:00`)
-  const end = new Date(`2000-01-01T${endTime}:00`)
+  const [startHours, startMinutes] = startTime.split(":").map(Number)
+  const [endHours, endMinutes] = endTime.split(":").map(Number)
 
-  return (end.getTime() - start.getTime()) / (1000 * 60) // Return minutes
-}
+  const startTotalMinutes = startHours * 60 + startMinutes
+  let endTotalMinutes = endHours * 60 + endMinutes
 
-export function isValidTimeRange(startTime: string, endTime: string): boolean {
-  if (!startTime || !endTime) return false
+  // Handle overnight shifts
+  if (endTotalMinutes < startTotalMinutes) {
+    endTotalMinutes += 24 * 60
+  }
 
-  const start = new Date(`2000-01-01T${startTime}:00`)
-  const end = new Date(`2000-01-01T${endTime}:00`)
-
-  return end > start
-}
-
-export function calculateTotalHours(entry: BreakEntry): string {
-  const {
-    shiftStart,
-    shiftEnd,
-    break1Start,
-    break1End,
-    break2Start,
-    break2End,
-    outsideTherapyStart,
-    outsideTherapyEnd,
-  } = entry
-
-  if (!shiftStart || !shiftEnd) return "0.00"
-
-  const startTotalMinutes = calculateBreakDuration("00:00", shiftStart)
-  const endTotalMinutes = calculateBreakDuration("00:00", shiftEnd)
-
-  // Handle cases where the shift spans across midnight
-  const shiftDurationMinutes =
-    endTotalMinutes >= startTotalMinutes
-      ? endTotalMinutes - startTotalMinutes
-      : 24 * 60 - startTotalMinutes + endTotalMinutes
-
-  // Subtract break durations
-  const break1Duration = calculateBreakDuration(break1Start, break1End)
-  const break2Duration = calculateBreakDuration(break2Start, break2End)
-  const outsideTherapyDuration = calculateBreakDuration(outsideTherapyStart, outsideTherapyEnd)
-
-  const totalMinutes = shiftDurationMinutes - break1Duration - break2Duration - outsideTherapyDuration
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-
-  return `${hours}.${minutes.toString().padStart(2, "0")}`
-}
-
-export function calculateShiftHours(shiftStart?: string, shiftEnd?: string): number {
-  if (!shiftStart || !shiftEnd) return 0
-
-  const startTotalMinutes = calculateBreakDuration("00:00", shiftStart)
-  const endTotalMinutes = calculateBreakDuration("00:00", shiftEnd)
-
-  // Handle cases where the shift spans across midnight
-  const shiftDurationMinutes =
-    endTotalMinutes >= startTotalMinutes
-      ? endTotalMinutes - startTotalMinutes
-      : 24 * 60 - startTotalMinutes + endTotalMinutes
-
-  return shiftDurationMinutes / 60
+  const diffMinutes = endTotalMinutes - startTotalMinutes
+  return diffMinutes / 60
 }
 
 export function formatShiftHours(hours: number): string {
-  const wholeHours = Math.floor(hours)
-  const minutes = Math.round((hours - wholeHours) * 60)
-
-  if (minutes === 0) {
-    return `${wholeHours}.00 hrs`
-  } else {
-    return `${wholeHours}.${minutes.toString().padStart(2, "0")} hrs`
-  }
+  return `${hours.toFixed(2)} hrs`
 }
 
 export function exportToCSV(breakEntries: BreakEntry[], employees: Employee[], filename: string) {
-  // Create headers
   const headers = [
-    "Date",
-    "Employee",
+    "Employee Name",
     "Department",
+    "Date",
     "Shift Start",
     "Shift End",
+    "Shift Hours",
     "Break 1 Start",
     "Break 1 End",
     "Break 1 Coverage",
@@ -111,53 +54,74 @@ export function exportToCSV(breakEntries: BreakEntry[], employees: Employee[], f
     "Outside Therapy Start",
     "Outside Therapy End",
     "Outside Therapy Reason",
-    "Total Hours",
   ]
 
-  // Create rows
   const rows = breakEntries.map((entry) => {
-    const employee = employees.find((e) => e.id === entry.employeeId)
-    const coverage1Employee = employees.find((e) => e.id === entry.coverageEmployeeId)
-    const coverage2Employee = employees.find((e) => e.id === entry.coverage2EmployeeId)
+    const employee = employees.find((emp) => emp.id === entry.employeeId)
+    const coverageEmployee1 = entry.coverageEmployeeId
+      ? employees.find((emp) => emp.id === entry.coverageEmployeeId)
+      : null
+    const coverageEmployee2 = entry.coverage2EmployeeId
+      ? employees.find((emp) => emp.id === entry.coverage2EmployeeId)
+      : null
 
-    const date = new Date(entry.date)
-    const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
+    const shiftHours = calculateShiftHours(entry.shiftStart, entry.shiftEnd)
 
-    return {
-      Date: formattedDate,
-      Employee: employee?.name || "Unknown",
-      Department: employee?.department || "Unknown",
-      "Shift Start": formatTime(entry.shiftStart),
-      "Shift End": formatTime(entry.shiftEnd),
-      "Break 1 Start": formatTime(entry.break1Start),
-      "Break 1 End": formatTime(entry.break1End),
-      "Break 1 Coverage": coverage1Employee?.name || "",
-      "Break 2 Start": formatTime(entry.break2Start),
-      "Break 2 End": formatTime(entry.break2End),
-      "Break 2 Coverage": coverage2Employee?.name || "",
-      "Outside Therapy Start": formatTime(entry.outsideTherapyStart),
-      "Outside Therapy End": formatTime(entry.outsideTherapyEnd),
-      "Outside Therapy Reason": entry.outsideTherapyReason || "",
-      "Total Hours": calculateTotalHours(entry),
-    }
+    return [
+      employee?.name || "Unknown",
+      employee?.department || "Unknown",
+      new Date(entry.date).toLocaleDateString(),
+      formatTime(entry.shiftStart),
+      formatTime(entry.shiftEnd),
+      formatShiftHours(shiftHours),
+      entry.break1Start ? formatTime(entry.break1Start) : "",
+      entry.break1End ? formatTime(entry.break1End) : "",
+      coverageEmployee1?.name || "",
+      entry.break2Start ? formatTime(entry.break2Start) : "",
+      entry.break2End ? formatTime(entry.break2End) : "",
+      coverageEmployee2?.name || "",
+      entry.outsideTherapyStart ? formatTime(entry.outsideTherapyStart) : "",
+      entry.outsideTherapyEnd ? formatTime(entry.outsideTherapyEnd) : "",
+      entry.outsideTherapyReason || "",
+    ]
   })
 
-  // Combine headers and rows
-  const csvContent =
-    "data:text/csv;charset=utf-8," + [headers, ...rows.map(Object.values)].map((row) => row.join(",")).join("\n")
+  const csvContent = [headers, ...rows].map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
 
-  const encodedUri = encodeURI(csvContent)
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
   const link = document.createElement("a")
-  link.setAttribute("href", encodedUri)
+  const url = URL.createObjectURL(blob)
+  link.setAttribute("href", url)
   link.setAttribute("download", `${filename}.csv`)
+  link.style.visibility = "hidden"
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
 }
 
-export function formatOutsideTherapyTime(start?: string, end?: string, reason?: string): string {
-  if (!start || !end) return ""
+export function generateShareToken(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+}
 
-  const formattedTime = `${formatTime(start)} - ${formatTime(end)}`
-  return reason ? `${formattedTime} (${reason})` : formattedTime
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
+export function formatDateTime(date: Date): string {
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }

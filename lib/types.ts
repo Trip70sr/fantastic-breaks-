@@ -1,13 +1,9 @@
+export type Department = "RBT" | "Operations" | "BCBA" | "Floater"
+
 export interface Employee {
   id: string
   name: string
-  department: string
-  position?: string
-  email?: string
-  phone?: string
-  hireDate?: string
-  isActive?: boolean
-  workingToday?: boolean
+  department: Department
 }
 
 export interface BreakEntry {
@@ -25,12 +21,27 @@ export interface BreakEntry {
   outsideTherapyStart?: string
   outsideTherapyEnd?: string
   outsideTherapyReason?: string
-  notes?: string
 }
 
-export interface ShareableData {
-  employees: Employee[]
-  breakEntries: BreakEntry[]
-  generatedAt: string
-  expiresAt: string
+export interface NotificationSettings {
+  directorEmail: string
+  breakDurationThreshold: number
+  enableBreakDurationAlerts: boolean
+  enableRealTimeAlerts: boolean
+  alertCooldownMinutes: number
+}
+
+export interface BreakAlert {
+  id: string
+  employeeId: string
+  employeeName: string
+  breakType: "break1" | "break2"
+  breakStart: string
+  breakEnd: string
+  duration: number
+  threshold: number
+  date: string
+  timestamp: Date
+  emailSent: boolean
+  acknowledged: boolean
 }

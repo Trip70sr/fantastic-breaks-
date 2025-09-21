@@ -269,3 +269,35 @@
   border-color: hsl(180 100% 40%);
   box-shadow: 0 0 0 1px hsl(180 100% 40%);
 }
+
+/* Custom styles for coverage alerts */
+.coverage-alert-row {
+  @apply bg-red-50 border-red-200;
+}
+
+.coverage-missing {
+  @apply text-red-600 font-medium;
+}
+
+.coverage-covered {
+  @apply text-green-600;
+}
+
+.coverage-none {
+  @apply text-gray-400;
+}
+
+/* Animation for alerts */
+@keyframes pulse-red {
+  0%,
+  100% {\
+    @apply bg-red-50;
+  }
+  50% {\
+    @apply bg-red-100;
+  }
+}
+
+.coverage-alert-pulse {
+  animation: pulse-red 2s infinite;
+}
