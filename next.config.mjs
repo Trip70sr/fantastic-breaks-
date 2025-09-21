@@ -2,17 +2,24 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
+  skipTrailingSlashRedirect: true,
+  distDir: 'out',
+  images: {
+    unoptimized: true,
+    loader: 'custom',
+    loaderFile: './image-loader.js',
+  },
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/fantastic-breaks' : '',
+  experimental: {
+    esmExternals: 'loose',
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-  images: {
-    unoptimized: true
-  },
-  basePath: process.env.NODE_ENV === 'production' ? '/fantastic-breaks' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks/' : '',
 }
 
 export default nextConfig

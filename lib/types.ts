@@ -31,3 +31,26 @@ export interface ManagementFilters {
   showCoverageIssues: boolean
   showOvertimeAlerts: boolean
 }
+
+export interface NotificationSettings {
+  directorEmail: string
+  breakDurationThreshold: number
+  enableBreakDurationAlerts: boolean
+  enableRealTimeAlerts: boolean
+  alertCooldownMinutes: number
+}
+
+export interface BreakAlert {
+  id: string
+  employeeId: string
+  employeeName: string
+  breakType: "break1" | "break2"
+  breakStart: string
+  breakEnd: string
+  duration: number
+  threshold: number
+  date: string
+  timestamp: Date
+  emailSent: boolean
+  acknowledged: boolean
+}

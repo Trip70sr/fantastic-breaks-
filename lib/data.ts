@@ -155,3 +155,155 @@ export const initialBreakEntries: BreakEntry[] = [
 // Export aliases for compatibility
 export const employees = initialEmployees
 export const breakEntries = initialBreakEntries
+
+// Helper function to get employee name by ID
+export const getEmployeeName = (employeeId: string): string => {
+  const employee = initialEmployees.find((emp) => emp.id === employeeId)
+  return employee ? employee.name : "Unknown"
+}
+
+// Helper function to check if an employee has missing coverage
+export const hasMissingCoverage = (entry: BreakEntry): boolean => {
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+
+  const missingBreak1Coverage = hasBreak1 && !entry.coverageEmployeeId
+  const missingBreak2Coverage = hasBreak2 && !entry.coverage2EmployeeId
+
+  return missingBreak1Coverage || missingBreak2Coverage
+}
+
+// Helper function to get coverage status for display
+export const getCoverageStatus = (entry: BreakEntry) => {
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+
+  const break1Status = hasBreak1 ? (entry.coverageEmployeeId ? "covered" : "missing") : "none"
+  const break2Status = hasBreak2 ? (entry.coverage2EmployeeId ? "covered" : "missing") : "none"
+
+  return { break1Status, break2Status }
+}
+
+// Load functions for localStorage integration
+export function loadEmployees(): Employee[] {
+  if (typeof window === "undefined") return initialEmployees
+
+  try {
+    const saved = localStorage.getItem("employees")
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (error) {
+    console.error("Error loading employees:", error)
+  }
+
+  return initialEmployees
+}
+
+export function loadBreakEntries(): BreakEntry[] {
+  if (typeof window === "undefined") return initialBreakEntries
+
+  try {
+    const saved = localStorage.getItem("breakEntries")
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (error) {
+    console.error("Error loading break entries:", error)
+  }
+
+  return initialBreakEntries
+}
+
+export function saveEmployees(employees: Employee[]): void {
+  if (typeof window === "undefined") return
+
+  try {
+    localStorage.setItem("employees", JSON.stringify(employees))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
+  } catch (error) {
+    console.error("Error saving employees:", error)
+  }
+}
+
+export function saveBreakEntries(entries: BreakEntry[]): void {
+  if (typeof window === "undefined") return
+
+  try {
+    localStorage.setItem("breakEntries", JSON.stringify(entries))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
+  } catch (error) {
+    console.error("Error saving break entries:", error)
+  }
+}
+
+// Utility functions
+export function generateId(): string {
+  return Date.now().toString() + Math.random().toString(36).substr(2, 9)
+}
+
+export function validateBreakEntry(entry: Partial<BreakEntry>): string[] {
+  const errors: string[] = []
+
+  if (!entry.employeeId) errors.push("Employee is required")
+  if (!entry.shiftStart) errors.push("Shift start time is required")
+  if (!entry.shiftEnd) errors.push("Shift end time is required")
+  if (!entry.date) errors.push("Date is required")
+
+  return errors
+}
+
+export function getBreakStats(entries: BreakEntry[], employees: Employee[]) {
+  const totalEntries = entries.length
+  const entriesWithBreaks = entries.filter((e) => e.break1Start && e.break1End).length
+  const entriesWithCoverage = entries.filter((e) => e.coverageEmployeeId).length
+  const entriesWithSecondBreak = entries.filter((e) => e.break2Start && e.break2End).length
+
+  return {
+    totalEntries,
+    entriesWithBreaks,
+    entriesWithCoverage,
+    entriesWithSecondBreak,
+    breakCoverageRate: totalEntries > 0 ? (entriesWithCoverage / totalEntries) * 100 : 0,
+  }
+}
+
+export function filterEntriesByDate(entries: BreakEntry[], date: Date): BreakEntry[] {
+  const targetDate = date.toISOString().split("T")[0]
+  return entries.filter((entry) => {
+    const entryDate = new Date(entry.date).toISOString().split("T")[0]
+    return entryDate === targetDate
+  })
+}
+
+export function filterEntriesByEmployee(entries: BreakEntry[], employeeId: string): BreakEntry[] {
+  return entries.filter((entry) => entry.employeeId === employeeId)
+}
+
+export function getDepartments(employees: Employee[]): string[] {
+  return [...new Set(employees.map((emp) => emp.department))]
+}
+
+export function getWorkingEmployeesForDate(entries: BreakEntry[], employees: Employee[], date: Date): Employee[] {
+  const dateEntries = filterEntriesByDate(entries, date)
+  const workingEmployeeIds = dateEntries.map((entry) => entry.employeeId)
+  return employees.filter((emp) => workingEmployeeIds.includes(emp.id))
+}
+
+// Coverage validation functions
+export function getCoverageIssues(entry: BreakEntry): string[] {
+  const issues: string[] = []
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+  const hasCoverage1 = entry.coverageEmployeeId && entry.coverageEmployeeId !== "none"
+  const hasCoverage2 = entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none"
+
+  if (hasBreak1 && !hasCoverage1) {
+    issues.push("Break 1 missing coverage")
+  }
+  if (hasBreak2 && !hasCoverage2) {
+    issues.push("Break 2 missing coverage")
+  }
+
+  return issues
+}

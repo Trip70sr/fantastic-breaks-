@@ -126,6 +126,10 @@
   .print-break-after {
     page-break-after: always;
   }
+
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
 }
 
 /* Animation utilities */
@@ -280,7 +284,7 @@
 }
 
 .coverage-covered {
-  @apply text-green-600;
+  @apply text-green-600 font-medium;
 }
 
 .coverage-none {
@@ -298,6 +302,17 @@
   }
 }
 
-.coverage-alert-pulse {
-  animation: pulse-red 2s infinite;
+.animate-pulse-red {
+  animation: pulse-red 2s ease-in-out infinite;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .table-container {
+    @apply overflow-x-auto;
+  }
+
+  .mobile-card {
+    @apply p-3 space-y-2;
+  }
 }
