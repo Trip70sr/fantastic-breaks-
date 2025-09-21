@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CalendarIcon, CheckCircle, XCircle, AlertTriangle, Users, Clock, FileText } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
 import BreakTimesheetTable from "@/components/break-timesheet-table"
 import EmployeeManagement from "@/components/employee-management"
 import DataBackupRestore from "@/components/data-backup-restore"
@@ -13,6 +13,8 @@ import ManagementAccess from "@/components/management-access"
 import type { Employee, BreakEntry, Department } from "@/lib/types"
 import { initialEmployees } from "@/lib/data"
 import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "@/lib/utils"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Download, Database, CheckCircle, XCircle, AlertTriangle, Mail } from "lucide-react"
 import { format } from "date-fns"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,8 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import EmailSharing from "@/components/email-sharing"
+import TestShareDemo from "@/components/test-share-demo"
 import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
-import { loadEmployees, loadBreakEntries } from "@/lib/data"
 
 export default function EmployeeBreakDashboard() {
   const analytics = useAnalytics()
@@ -43,10 +45,6 @@ export default function EmployeeBreakDashboard() {
   })
   const [isEmailSharingOpen, setIsEmailSharingOpen] = useState(false)
 
-  const [selectedEmployee, setSelectedEmployee] = useState<string>("all")
-  const [selectedDepartment, setSelectedDepartment] = useState<string>("all")
-  const [selectedStatus, setSelectedStatus] = useState<string>("all")
-
   // Load employees from localStorage or use initial data
   useEffect(() => {
     const savedEmployees = localStorage.getItem("employees")
@@ -61,11 +59,6 @@ export default function EmployeeBreakDashboard() {
     if (savedBreakEntries) {
       setBreakEntries(JSON.parse(savedBreakEntries))
     }
-  }, [])
-
-  useEffect(() => {
-    setEmployees(loadEmployees())
-    setBreakEntries(loadBreakEntries())
   }, [])
 
   // Save break entries to localStorage whenever they change
@@ -286,253 +279,221 @@ export default function EmployeeBreakDashboard() {
     handleUpdateBreakEntry(updatedEntry)
   }
 
-  const filteredEntries = breakEntries.filter((entry) => {
-    const entryDate = new Date(entry.date)
-    const matchesDate = entryDate.toDateString() === selectedDate.toDateString()
-    const matchesEmployee = selectedEmployee === "all" || entry.employeeId === selectedEmployee
-    const matchesDepartment =
-      selectedDepartment === "all" ||
-      employees.find((emp) => emp.id === entry.employeeId)?.department === selectedDepartment
-    const matchesStatus = selectedStatus === "all" || entry.status === selectedStatus
-
-    return matchesDate && matchesEmployee && matchesDepartment && matchesStatus
-  })
-
-  const workingToday = employees.filter((emp) =>
-    breakEntries.some(
-      (entry) => entry.employeeId === emp.id && new Date(entry.date).toDateString() === selectedDate.toDateString(),
-    ),
-  )
-
-  const departments = [...new Set(employees.map((emp) => emp.department))]
-
   return (
     <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="gradient-card border-blue-200 hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{employees.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="gradient-card border-aquamarine-200 hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-aquamarine-700">Working Today</CardTitle>
-            <CalendarIcon className="h-4 w-4 text-aquamarine-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-aquamarine-900">{workingToday.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="gradient-card border-cyan-200 hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-cyan-700">Break Entries</CardTitle>
-            <Clock className="h-4 w-4 text-cyan-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-cyan-900">{filteredEntries.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="gradient-card border-blue-200 hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">Departments</CardTitle>
-            <FileText className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{departments.length}</div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold text-gray-800">Employee Break Management</h2>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setIsEmployeeManagementOpen(true)}>
+            Manage Employees
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsBackupRestoreOpen(true)}
+            className="flex items-center gap-2 bg-transparent"
+          >
+            <Database className="h-4 w-4" />
+            Backup & Restore
+          </Button>
+          <Button variant="default" onClick={handleExportCSV} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsEmailSharingOpen(true)}
+            className="flex items-center gap-2 bg-transparent"
+          >
+            <Mail className="h-4 w-4" />
+            Share App
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar Filters */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card className="gradient-card border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-blue-900">Filters</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-blue-700 mb-2 block">Date</label>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal border-blue-200 hover:bg-blue-50 bg-transparent"
-                  onClick={() => {
-                    const input = document.createElement("input")
-                    input.type = "date"
-                    input.value = selectedDate.toISOString().split("T")[0]
-                    input.onchange = (e) => {
-                      const target = e.target as HTMLInputElement
-                      setSelectedDate(new Date(target.value))
-                    }
-                    input.click()
-                  }}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4 text-blue-500" />
-                  {selectedDate.toLocaleDateString()}
-                </Button>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button id="date" variant={"outline"} className="w-full justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedDate, "PPP")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
 
-              <div>
-                <label className="text-sm font-medium text-blue-700 mb-2 block">Department</label>
-                <select
-                  value={selectedDepartment}
-                  onChange={(e) => setSelectedDepartment(e.target.value)}
-                  className="w-full p-2 border border-blue-200 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="all">All Departments</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-blue-700 mb-2 block">Employee</label>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                  className="w-full p-2 border border-blue-200 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="all">All Employees</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-blue-700 mb-2 block">Break Status</label>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-full p-2 border border-blue-200 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="all">All Status</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="missed">Missed</option>
-                </select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Working Today */}
-          <Card className="gradient-card border-aquamarine-200">
-            <CardHeader>
-              <CardTitle className="text-aquamarine-900">Working Today</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {workingToday.length === 0 ? (
-                  <p className="text-sm text-gray-500">No employees scheduled</p>
-                ) : (
-                  workingToday.map((emp) => (
-                    <div key={emp.id} className="flex items-center justify-between p-2 bg-aquamarine-50 rounded-md">
-                      <span className="text-sm font-medium text-aquamarine-900">{emp.name}</span>
-                      <Badge variant="secondary" className="bg-aquamarine-100 text-aquamarine-800">
-                        {emp.department}
-                      </Badge>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="lg:col-span-3">
-          <Tabs defaultValue="timesheet" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5 bg-blue-50 border border-blue-200">
-              <TabsTrigger value="timesheet" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-                Timesheet
-              </TabsTrigger>
-              <TabsTrigger value="employees" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-                Employees
-              </TabsTrigger>
-              <TabsTrigger
-                value="management"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Select
+                value={filterDepartment}
+                onValueChange={(value) => setFilterDepartment(value as Department | "all")}
+                disabled={managementFilters.showAllDepartments}
               >
-                Management
-              </TabsTrigger>
-              <TabsTrigger value="sharing" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-                Sharing
-              </TabsTrigger>
-              <TabsTrigger value="backup" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-                Backup
-              </TabsTrigger>
-            </TabsList>
+                <SelectTrigger id="department">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="RBT">RBT</SelectItem>
+                  <SelectItem value="Operations">Operations</SelectItem>
+                  <SelectItem value="BCBA">BCBA</SelectItem>
+                  <SelectItem value="Floater">Floater</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <TabsContent value="timesheet" className="space-y-4">
-              <BreakTimesheetTable
-                entries={filteredEntries}
-                employees={employees}
-                onUpdateEntry={(updatedEntry) => {
-                  const updatedEntries = breakEntries.map((entry) =>
-                    entry.id === updatedEntry.id ? updatedEntry : entry,
-                  )
-                  setBreakEntries(updatedEntries)
-                  localStorage.setItem("breakEntries", JSON.stringify(updatedEntries))
-                }}
-                onDeleteEntry={(entryId) => {
-                  const updatedEntries = breakEntries.filter((entry) => entry.id !== entryId)
-                  setBreakEntries(updatedEntries)
-                  localStorage.setItem("breakEntries", JSON.stringify(updatedEntries))
-                }}
-                selectedDate={selectedDate}
-                onAddEntry={(newEntry) => {
-                  const updatedEntries = [...breakEntries, newEntry]
-                  setBreakEntries(updatedEntries)
-                  localStorage.setItem("breakEntries", JSON.stringify(updatedEntries))
-                }}
-              />
-            </TabsContent>
+            <div className="space-y-2">
+              <Label htmlFor="employee">Employee</Label>
+              <Select value={filterEmployee} onValueChange={setFilterEmployee}>
+                <SelectTrigger id="employee">
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {employees
+                    .filter(
+                      (e) =>
+                        managementFilters.showAllDepartments ||
+                        filterDepartment === "all" ||
+                        e.department === filterDepartment,
+                    )
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <TabsContent value="employees">
-              <EmployeeManagement
-                employees={employees}
-                onUpdateEmployees={(updatedEmployees) => {
-                  setEmployees(updatedEmployees)
-                  localStorage.setItem("employees", JSON.stringify(updatedEmployees))
-                }}
-              />
-            </TabsContent>
+            <div className="space-y-2">
+              <Label htmlFor="breakStatus">Break Status</Label>
+              <Select value={filterBreakStatus} onValueChange={setFilterBreakStatus}>
+                <SelectTrigger id="breakStatus">
+                  <SelectValue placeholder="Select break status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Breaks</SelectItem>
+                  <SelectItem value="given">Breaks Given</SelectItem>
+                  <SelectItem value="notGiven">Breaks Not Given</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <TabsContent value="management">
-              <ManagementAccess />
-            </TabsContent>
+            {workingEmployees.length > 0 && (
+              <div className="space-y-2 pt-4 border-t">
+                <Label className="text-sm font-medium">Working Today ({workingEmployees.length})</Label>
+                <div className="text-xs text-gray-600 max-h-32 overflow-y-auto">
+                  {workingEmployees
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((emp, index) => (
+                      <div key={emp.id}>
+                        {emp.name}
+                        {index < workingEmployees.length - 1 ? ", " : ""}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-            <TabsContent value="sharing">
-              <EmailSharing />
-            </TabsContent>
+        <ManagementAccess
+          employees={employees}
+          breakEntries={breakEntries}
+          selectedDate={selectedDate}
+          onFilterChange={setManagementFilters}
+        />
 
-            <TabsContent value="backup">
-              <DataBackupRestore
-                employees={employees}
-                breakEntries={breakEntries}
-                onDataRestore={(employees, breakEntries) => {
-                  setEmployees(employees)
-                  setBreakEntries(breakEntries)
-                }}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Break Timesheet</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="timesheet" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="timesheet">Timesheet</TabsTrigger>
+                <TabsTrigger value="working">Working Today</TabsTrigger>
+                <TabsTrigger value="add">Add Entry</TabsTrigger>
+                <TabsTrigger value="test">Test Share</TabsTrigger>
+              </TabsList>
+              <TabsContent value="timesheet" className="mt-4">
+                <BreakTimesheetTable
+                  breakEntries={filteredBreakEntries}
+                  employees={employees}
+                  workingEmployees={workingEmployees}
+                  onUpdateEntry={handleUpdateBreakEntry}
+                  onDeleteEntry={handleDeleteBreakEntry}
+                />
+              </TabsContent>
+              <TabsContent value="working" className="mt-4">
+                <WorkingEmployeesTable
+                  detailedEmployees={detailedWorkingEmployees}
+                  onQuickAddBreak={handleQuickAddBreak}
+                />
+              </TabsContent>
+              <TabsContent value="add" className="mt-4">
+                <BreakEntryForm
+                  employees={employees.filter(
+                    (e) =>
+                      managementFilters.showAllDepartments ||
+                      filterDepartment === "all" ||
+                      e.department === filterDepartment,
+                  )}
+                  workingEmployees={workingEmployees}
+                  onAddEntry={(entry) => handleAddBreakEntry({ ...entry, date: selectedDate.toISOString() })}
+                  selectedDate={selectedDate}
+                />
+              </TabsContent>
+              <TabsContent value="test" className="mt-4">
+                <TestShareDemo />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
+
+      <EmployeeManagement
+        isOpen={isEmployeeManagementOpen}
+        onClose={() => setIsEmployeeManagementOpen(false)}
+        employees={employees}
+        breakEntries={breakEntries}
+        onAddEmployee={handleAddEmployee}
+        onUpdateEmployee={handleUpdateEmployee}
+        onDeleteEmployee={handleDeleteEmployee}
+        onAddBreakEntry={handleAddBreakEntry}
+        onUpdateBreakEntry={handleUpdateBreakEntry}
+      />
+
+      <DataBackupRestore
+        isOpen={isBackupRestoreOpen}
+        onClose={() => setIsBackupRestoreOpen(false)}
+        employees={employees}
+        breakEntries={breakEntries}
+        onRestoreData={handleRestoreData}
+      />
+
+      <EmailSharing
+        isOpen={isEmailSharingOpen}
+        onClose={() => setIsEmailSharingOpen(false)}
+        employees={employees}
+        breakEntries={breakEntries}
+      />
     </div>
   )
 }

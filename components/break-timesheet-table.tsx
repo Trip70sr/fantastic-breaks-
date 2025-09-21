@@ -143,7 +143,9 @@ export default function BreakTimesheetTable({
                 <TableCell>
                   {entry.outsideTherapyStart && entry.outsideTherapyEnd ? (
                     <div className="text-xs">
-                      <div>{formatTime(entry.outsideTherapyStart)} - {formatTime(entry.outsideTherapyEnd)}</div>
+                      <div>
+                        {formatTime(entry.outsideTherapyStart)} - {formatTime(entry.outsideTherapyEnd)}
+                      </div>
                       {entry.outsideTherapyReason && (
                         <div className="text-gray-500 italic">({entry.outsideTherapyReason})</div>
                       )}
@@ -335,11 +337,13 @@ export default function BreakTimesheetTable({
                                 {employee.name}
                               </SelectItem>
                             ))}
-                      </SelectContent>
-                    </Select>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              </div>\
+              )}
+
               {/* Outside Therapy Section */}
               <div className="border-t pt-4 mt-4">
                 <h3 className="font-medium mb-2">Time Outside Therapy</h3>
