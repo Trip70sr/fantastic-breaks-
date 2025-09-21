@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,12 +20,19 @@ interface ShareableLink {
   accessCount: number
 }
 
-export default function EmailSharing() {
+interface EmailSharingProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function EmailSharing({ isOpen, onClose }: EmailSharingProps) {
   const [email, setEmail] = useState("")
   const [subject, setSubject] = useState("Break Schedule Update")
   const [message, setMessage] = useState("")
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [shareableLinks, setShareableLinks] = useState<ShareableLink[]>([])
+
+  const employees = JSON.parse(localStorage.getItem("employees") || "[]")
 
   const generateShareableLink = () => {
     if (!selectedEmployee) {
@@ -65,7 +72,6 @@ export default function EmailSharing() {
       return
     }
 
-    // In a real app, this would send an actual email
     const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`
     window.open(mailtoLink)
     toast.success("Email client opened")
@@ -85,126 +91,137 @@ export default function EmailSharing() {
     return new Date(expiresAt) < new Date()
   }
 
+  if (!isOpen) return null
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          Email Sharing
-        </CardTitle>
-        <CardDescription>Share break schedules via email or generate shareable links</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-3">Send Email</h4>
-            <div className="grid gap-3">
-              <div>
-                <Label htmlFor="email">Recipient Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="employee@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Sharing
+          </DialogTitle>
+        </DialogHeader>
 
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Input
-                  id="subject"
-                  placeholder="Break Schedule Update"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                />
-              </div>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-3">Send Email</h4>
+              <div className="grid gap-3">
+                <div>
+                  <Label htmlFor="email">Recipient Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="employee@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="message">Message</Label>
-                <Textarea
-                  id="message"
-                  placeholder="Your break schedule has been updated..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={4}
-                />
-              </div>
+                <div>
+                  <Label htmlFor="subject">Subject</Label>
+                  <Input
+                    id="subject"
+                    placeholder="Break Schedule Update"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                  />
+                </div>
 
-              <Button onClick={sendEmail} className="w-full">
-                <Send className="h-4 w-4 mr-2" />
-                Send Email
-              </Button>
+                <div>
+                  <Label htmlFor="message">Message</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Your break schedule has been updated..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <Button onClick={sendEmail} className="w-full">
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Email
+                </Button>
+              </div>
             </div>
-          </div>
 
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-3">Generate Shareable Link</h4>
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="employee-select">Select Employee</Label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
-                    <SelectItem value="Michael Chen">Michael Chen</SelectItem>
-                    <SelectItem value="Emily Rodriguez">Emily Rodriguez</SelectItem>
-                    <SelectItem value="David Kim">David Kim</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button onClick={generateShareableLink} className="w-full">
-                <Link className="h-4 w-4 mr-2" />
-                Generate Link (7 days)
-              </Button>
-            </div>
-          </div>
-
-          {shareableLinks.length > 0 && (
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Active Links</h4>
+              <h4 className="font-medium mb-3">Generate Shareable Link</h4>
               <div className="space-y-3">
-                {shareableLinks.map((link) => (
-                  <div key={link.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium">{link.employeeName}</span>
-                        <Badge variant={isExpired(link.expiresAt) ? "destructive" : "default"}>
-                          {isExpired(link.expiresAt) ? "Expired" : "Active"}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Expires: {formatDate(link.expiresAt)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            Views: {link.accessCount}
-                          </span>
+                <div>
+                  <Label htmlFor="employee-select">Select Employee</Label>
+                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((employee: any) => (
+                        <SelectItem key={employee.id} value={employee.name}>
+                          {employee.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button onClick={generateShareableLink} className="w-full">
+                  <Link className="h-4 w-4 mr-2" />
+                  Generate Link (7 days)
+                </Button>
+              </div>
+            </div>
+
+            {shareableLinks.length > 0 && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Active Links</h4>
+                <div className="space-y-3">
+                  {shareableLinks.map((link) => (
+                    <div key={link.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">{link.employeeName}</span>
+                          <Badge variant={isExpired(link.expiresAt) ? "destructive" : "default"}>
+                            {isExpired(link.expiresAt) ? "Expired" : "Active"}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <div className="flex items-center gap-4">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              Expires: {formatDate(link.expiresAt)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              Views: {link.accessCount}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyLink(link.token)}
+                        disabled={isExpired(link.expiresAt)}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyLink(link.token)}
-                      disabled={isExpired(link.expiresAt)}
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy
-                    </Button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </CardContent>
-    </Card>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

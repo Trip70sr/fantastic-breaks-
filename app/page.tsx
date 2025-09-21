@@ -2,7 +2,7 @@ import EmployeeBreakDashboard from "@/components/employee-break-dashboard"
 
 export default function Home() {
   return (
-    <main className="container mx-auto p-4">
+    <main className="min-h-screen bg-background">
       <EmployeeBreakDashboard />
     </main>
   )

@@ -3,27 +3,44 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Download, Upload, Database, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Download, Upload, Database, AlertCircle, FileText } from "lucide-react"
 import { toast } from "sonner"
 
-export default function DataBackupRestore() {
+interface DataBackupRestoreProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function DataBackupRestore({ isOpen, onClose }: DataBackupRestoreProps) {
   const [backupData, setBackupData] = useState("")
   const [isRestoring, setIsRestoring] = useState(false)
 
   const handleBackup = () => {
     try {
-      const data = {
-        employees: JSON.parse(localStorage.getItem("employees") || "[]"),
-        breakEntries: JSON.parse(localStorage.getItem("breakEntries") || "[]"),
+      const employees = JSON.parse(localStorage.getItem("employees") || "[]")
+      const breakEntries = JSON.parse(localStorage.getItem("breakEntries") || "[]")
+
+      const backup = {
+        version: "1.0",
         timestamp: new Date().toISOString(),
+        data: {
+          employees,
+          breakEntries,
+        },
+        metadata: {
+          employeeCount: employees.length,
+          breakEntryCount: breakEntries.length,
+        },
       }
 
-      const dataStr = JSON.stringify(data, null, 2)
+      const dataStr = JSON.stringify(backup, null, 2)
       const dataBlob = new Blob([dataStr], { type: "application/json" })
       const url = URL.createObjectURL(dataBlob)
 
@@ -47,17 +64,18 @@ export default function DataBackupRestore() {
 
     setIsRestoring(true)
     try {
-      const data = JSON.parse(backupData)
+      const backup = JSON.parse(backupData)
 
-      if (data.employees) {
-        localStorage.setItem("employees", JSON.stringify(data.employees))
+      if (!backup.data || !backup.data.employees || !backup.data.breakEntries) {
+        throw new Error("Invalid backup format")
       }
-      if (data.breakEntries) {
-        localStorage.setItem("breakEntries", JSON.stringify(data.breakEntries))
-      }
+
+      localStorage.setItem("employees", JSON.stringify(backup.data.employees))
+      localStorage.setItem("breakEntries", JSON.stringify(backup.data.breakEntries))
 
       toast.success("Data restored successfully. Please refresh the page.")
       setBackupData("")
+      onClose()
     } catch (error) {
       toast.error("Invalid backup data format")
     } finally {
@@ -77,70 +95,180 @@ export default function DataBackupRestore() {
     reader.readAsText(file)
   }
 
+  const copyBackupToClipboard = () => {
+    try {
+      const employees = JSON.parse(localStorage.getItem("employees") || "[]")
+      const breakEntries = JSON.parse(localStorage.getItem("breakEntries") || "[]")
+
+      const backup = {
+        version: "1.0",
+        timestamp: new Date().toISOString(),
+        data: {
+          employees,
+          breakEntries,
+        },
+        metadata: {
+          employeeCount: employees.length,
+          breakEntryCount: breakEntries.length,
+        },
+      }
+
+      const dataStr = JSON.stringify(backup, null, 2)
+      navigator.clipboard.writeText(dataStr)
+      toast.success("Backup data copied to clipboard")
+    } catch (error) {
+      toast.error("Failed to copy backup data")
+    }
+  }
+
+  if (!isOpen) return null
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          Data Backup & Restore
-        </CardTitle>
-        <CardDescription>Backup your data or restore from a previous backup</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Create Backup</h4>
-            <p className="text-sm text-muted-foreground mb-3">Download a backup of all your employee and break data</p>
-            <Button onClick={handleBackup} className="w-full">
-              <Download className="h-4 w-4 mr-2" />
-              Download Backup
-            </Button>
-          </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Data Backup & Restore
+          </DialogTitle>
+        </DialogHeader>
 
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-2">Restore from Backup</h4>
-            <p className="text-sm text-muted-foreground mb-3">Upload a backup file or paste backup data to restore</p>
+        <div className="space-y-6">
+          {/* Current Data Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Current Data Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {JSON.parse(localStorage.getItem("employees") || "[]").length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Employees</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {JSON.parse(localStorage.getItem("breakEntries") || "[]").length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Break Entries</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <div className="space-y-3">
+          {/* Backup Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Create Backup
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Download a complete backup of your employee and break entry data.
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={handleBackup} className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Download Backup File
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={copyBackupToClipboard}
+                  className="flex items-center gap-2 bg-transparent"
+                >
+                  <FileText className="h-4 w-4" />
+                  Copy to Clipboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Restore Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Restore from Backup
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Warning:</strong> Restoring from backup will completely replace all current data. This action
+                  cannot be undone.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="backup-file">Upload Backup File</Label>
+                  <Input id="backup-file" type="file" accept=".json" onChange={handleFileUpload} className="mt-1" />
+                </div>
+
+                <div>
+                  <Label htmlFor="backup-data">Or Paste Backup Data</Label>
+                  <Textarea
+                    id="backup-data"
+                    placeholder="Paste your backup JSON data here..."
+                    value={backupData}
+                    onChange={(e) => setBackupData(e.target.value)}
+                    rows={8}
+                    className="mt-1 font-mono text-sm"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleRestore}
+                  disabled={!backupData.trim() || isRestoring}
+                  className="w-full"
+                  variant="destructive"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {isRestoring ? "Restoring..." : "Restore Data"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Instructions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Instructions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
               <div>
-                <Label htmlFor="backup-file">Upload Backup File</Label>
-                <Input id="backup-file" type="file" accept=".json" onChange={handleFileUpload} className="mt-1" />
+                <strong>To create a backup:</strong>
+                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
+                  <li>Click "Download Backup File" to save a JSON file to your computer</li>
+                  <li>Or click "Copy to Clipboard" to copy the backup data</li>
+                  <li>Store the backup file in a safe location</li>
+                </ol>
               </div>
-
               <div>
-                <Label htmlFor="backup-data">Or Paste Backup Data</Label>
-                <Textarea
-                  id="backup-data"
-                  placeholder="Paste your backup JSON data here..."
-                  value={backupData}
-                  onChange={(e) => setBackupData(e.target.value)}
-                  rows={6}
-                  className="mt-1 font-mono text-sm"
-                />
+                <strong>To restore from backup:</strong>
+                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
+                  <li>Upload a backup file or paste the backup data</li>
+                  <li>Click "Restore Data" to replace all current data</li>
+                  <li>Refresh the page to see the restored data</li>
+                </ol>
               </div>
-
-              <Button onClick={handleRestore} disabled={!backupData.trim() || isRestoring} className="w-full">
-                <Upload className="h-4 w-4 mr-2" />
-                {isRestoring ? "Restoring..." : "Restore Data"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-yellow-800">Important Notes:</p>
-                <ul className="mt-1 text-yellow-700 space-y-1">
-                  <li>• Restoring will overwrite all current data</li>
-                  <li>• Make sure to backup current data before restoring</li>
-                  <li>• Refresh the page after restoring to see changes</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      </CardContent>
-    </Card>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
