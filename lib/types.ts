@@ -24,13 +24,21 @@ export interface BreakEntry {
   updatedAt: string
 }
 
-export interface ShareableData {
-  token: string
+export interface BreakSchedule {
+  id: string
+  employeeId: string
   employeeName: string
   date: string
-  breakEntry: BreakEntry
-  createdAt: string
-  expiresAt: string
+  shiftStart: string
+  shiftEnd: string
+  break1Start: string
+  break1End: string
+  break1Coverage: string
+  break2Start: string
+  break2End: string
+  break2Coverage: string
+  notes: string
+  status: "scheduled" | "in-progress" | "completed"
 }
 
 export interface CoverageAlert {
@@ -38,15 +46,8 @@ export interface CoverageAlert {
   employeeId: string
   employeeName: string
   date: string
-  breakNumber: 1 | 2
   breakTime: string
+  type: "break1" | "break2"
   severity: "high" | "medium" | "low"
   message: string
-}
-
-export interface BackupData {
-  employees: Employee[]
-  breakEntries: BreakEntry[]
-  exportDate: string
-  version: string
 }

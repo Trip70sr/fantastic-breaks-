@@ -98,5 +98,10 @@ export const defaultBreakEntries: BreakEntry[] = [
   },
 ]
 
+// Export aliases for backward compatibility
 export const initialEmployees = defaultEmployees
 export const initialBreakEntries = defaultBreakEntries
+
+// Also export as sampleEmployees and sampleBreakEntries for compatibility
+export const sampleEmployees = defaultEmployees
+export const sampleBreakEntries = defaultBreakEntries
