@@ -1,30 +1,27 @@
 export interface Employee {
   id: string
   name: string
-  position: string
   department: string
+  position: string
   email: string
   phone: string
-  startDate: string
-  status: "active" | "inactive"
-  avatar?: string
+  hireDate: string
+  isActive: boolean
 }
 
 export interface BreakEntry {
   id: string
   employeeId: string
-  employeeName: string
   date: string
-  shiftStart: string
-  shiftEnd: string
-  break1Start?: string
-  break1End?: string
-  break1Coverage?: string
-  break2Start?: string
-  break2End?: string
-  break2Coverage?: string
-  notes?: string
-  status: "scheduled" | "in-progress" | "completed" | "missed"
+  break1Start: string
+  break1End: string
+  break1Coverage: string
+  break2Start: string
+  break2End: string
+  break2Coverage: string
+  notes: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface ShareableData {
@@ -42,14 +39,14 @@ export interface CoverageAlert {
   employeeName: string
   date: string
   breakNumber: 1 | 2
+  breakTime: string
   severity: "high" | "medium" | "low"
   message: string
-  resolved: boolean
 }
 
 export interface BackupData {
   employees: Employee[]
   breakEntries: BreakEntry[]
-  timestamp: string
+  exportDate: string
   version: string
 }

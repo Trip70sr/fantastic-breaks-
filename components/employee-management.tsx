@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -13,346 +13,292 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Edit, Trash2, UserPlus } from "lucide-react"
+import { Users, Edit, Plus, Trash2, Mail, Phone } from "lucide-react"
 import type { Employee } from "@/lib/types"
 import { toast } from "sonner"
 
 interface EmployeeManagementProps {
   employees: Employee[]
-  onEmployeesChange: (employees: Employee[]) => void
+  onEmployeesUpdate: (employees: Employee[]) => void
 }
 
-const departments = [
-  "Sales",
-  "Marketing",
-  "Engineering",
-  "HR",
-  "Finance",
-  "Operations",
-  "Customer Service",
-  "IT",
-  "Legal",
-  "Administration",
-]
-
-export function EmployeeManagement({ employees, onEmployeesChange }: EmployeeManagementProps) {
+export function EmployeeManagement({ employees, onEmployeesUpdate }: EmployeeManagementProps) {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [formData, setFormData] = useState({
-    name: "",
-    department: "",
-    email: "",
-    isActive: true,
-  })
+  const [isAddingNew, setIsAddingNew] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
 
-  const openDialog = (employee?: Employee) => {
-    if (employee) {
-      setEditingEmployee(employee)
-      setFormData({
-        name: employee.name,
-        department: employee.department,
-        email: employee.email,
-        isActive: employee.isActive,
-      })
-    } else {
-      setEditingEmployee(null)
-      setFormData({
-        name: "",
-        department: "",
-        email: "",
-        isActive: true,
-      })
-    }
+  const filteredEmployees = employees.filter(
+    (employee) =>
+      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.position.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  const openEditDialog = (employee: Employee) => {
+    setEditingEmployee(employee)
+    setIsAddingNew(false)
     setIsDialogOpen(true)
   }
 
-  const closeDialog = () => {
-    setIsDialogOpen(false)
-    setEditingEmployee(null)
-    setFormData({
+  const openAddDialog = () => {
+    const newEmployee: Employee = {
+      id: "",
       name: "",
       department: "",
+      position: "",
       email: "",
+      phone: "",
+      hireDate: new Date().toISOString().split("T")[0],
       isActive: true,
-    })
+    }
+    setEditingEmployee(newEmployee)
+    setIsAddingNew(true)
+    setIsDialogOpen(true)
   }
 
   const handleSave = () => {
-    if (!formData.name.trim()) {
-      toast.error("Please enter employee name")
-      return
-    }
-    if (!formData.department) {
-      toast.error("Please select a department")
-      return
-    }
-    if (!formData.email.trim()) {
-      toast.error("Please enter email address")
+    if (!editingEmployee || !editingEmployee.name || !editingEmployee.department) {
+      toast.error("Please fill in all required fields")
       return
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
-      toast.error("Please enter a valid email address")
-      return
-    }
+    const updatedEmployees = [...employees]
 
-    // Check for duplicate email (excluding current employee if editing)
-    const duplicateEmail = employees.find(
-      (emp) => emp.email.toLowerCase() === formData.email.toLowerCase() && emp.id !== editingEmployee?.id,
-    )
-    if (duplicateEmail) {
-      toast.error("An employee with this email already exists")
-      return
-    }
-
-    if (editingEmployee) {
-      // Update existing employee
-      const updatedEmployees = employees.map((emp) =>
-        emp.id === editingEmployee.id
-          ? {
-              ...emp,
-              ...formData,
-            }
-          : emp,
-      )
-      onEmployeesChange(updatedEmployees)
-      toast.success("Employee updated successfully")
-    } else {
-      // Create new employee
-      const newEmployee: Employee = {
+    if (isAddingNew) {
+      const newEmployee = {
+        ...editingEmployee,
         id: Date.now().toString(),
-        ...formData,
-        createdAt: new Date().toISOString(),
       }
-      onEmployeesChange([...employees, newEmployee])
+      updatedEmployees.push(newEmployee)
       toast.success("Employee added successfully")
+    } else {
+      const index = updatedEmployees.findIndex((emp) => emp.id === editingEmployee.id)
+      if (index !== -1) {
+        updatedEmployees[index] = editingEmployee
+        toast.success("Employee updated successfully")
+      }
     }
 
-    closeDialog()
+    onEmployeesUpdate(updatedEmployees)
+    setIsDialogOpen(false)
+    setEditingEmployee(null)
   }
 
-  const handleDelete = (employee: Employee) => {
-    if (confirm(`Are you sure you want to delete ${employee.name}?`)) {
-      const updatedEmployees = employees.filter((emp) => emp.id !== employee.id)
-      onEmployeesChange(updatedEmployees)
-      toast.success("Employee deleted successfully")
+  const handleDelete = (employeeId: string) => {
+    const updatedEmployees = employees.filter((emp) => emp.id !== employeeId)
+    onEmployeesUpdate(updatedEmployees)
+    toast.success("Employee deleted successfully")
+  }
+
+  const toggleEmployeeStatus = (employeeId: string) => {
+    const updatedEmployees = employees.map((emp) => (emp.id === employeeId ? { ...emp, isActive: !emp.isActive } : emp))
+    onEmployeesUpdate(updatedEmployees)
+    toast.success("Employee status updated")
+  }
+
+  const updateEditingEmployee = (field: keyof Employee, value: string | boolean) => {
+    if (editingEmployee) {
+      setEditingEmployee({ ...editingEmployee, [field]: value })
     }
   }
-
-  const toggleEmployeeStatus = (employee: Employee) => {
-    const updatedEmployees = employees.map((emp) =>
-      emp.id === employee.id ? { ...emp, isActive: !emp.isActive } : emp,
-    )
-    onEmployeesChange(updatedEmployees)
-    toast.success(`Employee ${employee.isActive ? "deactivated" : "activated"} successfully`)
-  }
-
-  const activeEmployees = employees.filter((emp) => emp.isActive)
-  const inactiveEmployees = employees.filter((emp) => !emp.isActive)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Employee Directory</h3>
-          <p className="text-sm text-muted-foreground">Manage your team members and their information</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => openDialog()}>
-              <UserPlus className="h-4 w-4 mr-2" />
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Employee Management
+          </CardTitle>
+          <CardDescription>Manage employee information and status</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex-1 max-w-sm">
+              <Input
+                placeholder="Search employees..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button onClick={openAddDialog}>
+              <Plus className="h-4 w-4 mr-2" />
               Add Employee
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
-              <DialogDescription>
-                {editingEmployee ? "Update employee information." : "Add a new employee to your team."}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="col-span-3"
-                  placeholder="Enter full name"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="department" className="text-right">
-                  Department
-                </Label>
-                <div className="col-span-3">
-                  <Select
-                    value={formData.department}
-                    onValueChange={(value) => setFormData({ ...formData, department: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="col-span-3"
-                  placeholder="Enter email address"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="isActive" className="text-right">
-                  Active
-                </Label>
-                <div className="col-span-3">
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={closeDialog}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>{editingEmployee ? "Update" : "Add"} Employee</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Active Employees */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-md font-medium">Active Employees ({activeEmployees.length})</h4>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {activeEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell className="font-medium">{employee.name}</TableCell>
-                  <TableCell>{employee.department}</TableCell>
-                  <TableCell>{employee.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="default">Active</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => openDialog(employee)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => toggleEmployeeStatus(employee)}>
-                        <Switch checked={false} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(employee)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        {activeEmployees.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            No active employees found. Add your first employee to get started.
           </div>
-        )}
-      </div>
 
-      {/* Inactive Employees */}
-      {inactiveEmployees.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-md font-medium">Inactive Employees ({inactiveEmployees.length})</h4>
-          </div>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Department</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Hire Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {inactiveEmployees.map((employee) => (
-                  <TableRow key={employee.id} className="opacity-60">
-                    <TableCell className="font-medium">{employee.name}</TableCell>
-                    <TableCell>{employee.department}</TableCell>
-                    <TableCell>{employee.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">Inactive</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => openDialog(employee)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => toggleEmployeeStatus(employee)}>
-                          <Switch checked={true} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(employee)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {filteredEmployees.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No employees found
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredEmployees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell className="font-medium">{employee.name}</TableCell>
+                      <TableCell>{employee.department}</TableCell>
+                      <TableCell>{employee.position}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {employee.email && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Mail className="h-3 w-3" />
+                              {employee.email}
+                            </div>
+                          )}
+                          {employee.phone && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Phone className="h-3 w-3" />
+                              {employee.phone}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{new Date(employee.hireDate).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={employee.isActive ? "default" : "secondary"}>
+                            {employee.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                          <Switch
+                            checked={employee.isActive}
+                            onCheckedChange={() => toggleEmployeeStatus(employee.id)}
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(employee)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(employee.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
+
+      {/* Edit/Add Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{isAddingNew ? "Add Employee" : "Edit Employee"}</DialogTitle>
+            <DialogDescription>
+              {isAddingNew ? "Add a new employee to the system" : "Modify employee information"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingEmployee && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    value={editingEmployee.name}
+                    onChange={(e) => updateEditingEmployee("name", e.target.value)}
+                    placeholder="Full name"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="department">Department *</Label>
+                  <Input
+                    id="department"
+                    value={editingEmployee.department}
+                    onChange={(e) => updateEditingEmployee("department", e.target.value)}
+                    placeholder="Department"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="position">Position</Label>
+                  <Input
+                    id="position"
+                    value={editingEmployee.position}
+                    onChange={(e) => updateEditingEmployee("position", e.target.value)}
+                    placeholder="Job position"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="hire-date">Hire Date</Label>
+                  <Input
+                    id="hire-date"
+                    type="date"
+                    value={editingEmployee.hireDate}
+                    onChange={(e) => updateEditingEmployee("hireDate", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={editingEmployee.email}
+                    onChange={(e) => updateEditingEmployee("email", e.target.value)}
+                    placeholder="email@company.com"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={editingEmployee.phone}
+                    onChange={(e) => updateEditingEmployee("phone", e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="active"
+                  checked={editingEmployee.isActive}
+                  onCheckedChange={(checked) => updateEditingEmployee("isActive", checked)}
+                />
+                <Label htmlFor="active">Active Employee</Label>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>{isAddingNew ? "Add Employee" : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
