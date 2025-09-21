@@ -44,8 +44,8 @@ export interface CoverageAlert {
   timeSlot: string
   employeesCount: number
   coverageCount: number
-  missingCoverage: number
   severity: "low" | "medium" | "high"
+  message: string
 }
 
 export interface DepartmentStats {
