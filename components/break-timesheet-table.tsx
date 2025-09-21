@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -12,12 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, Plus, Trash2, AlertCircle, Clock, User } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { AlertCircle, Edit, Plus, Trash2, Clock, User } from "lucide-react"
 import type { Employee, BreakEntry, CoverageAlert } from "@/lib/types"
 import { formatTime } from "@/lib/utils"
 import { toast } from "sonner"
@@ -25,36 +25,46 @@ import { toast } from "sonner"
 interface BreakTimesheetTableProps {
   employees: Employee[]
   breakEntries: BreakEntry[]
-  onBreakEntryUpdate: (entries: BreakEntry[]) => void
+  onBreakEntriesUpdate: (entries: BreakEntry[]) => void
   coverageAlerts: CoverageAlert[]
 }
 
 export function BreakTimesheetTable({
   employees,
   breakEntries,
-  onBreakEntryUpdate,
+  onBreakEntriesUpdate,
   coverageAlerts,
 }: BreakTimesheetTableProps) {
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0])
   const [editingEntry, setEditingEntry] = useState<BreakEntry | null>(null)
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [formData, setFormData] = useState<Partial<BreakEntry>>({})
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAddingNew, setIsAddingNew] = useState(false)
 
   const activeEmployees = employees.filter((emp) => emp.isActive)
+  const filteredEntries = breakEntries.filter((entry) => entry.date === selectedDate)
 
-  const hasAlert = (entryId: string) => {
-    return coverageAlerts.some((alert) => alert.id.startsWith(entryId))
+  const getEmployeeName = (employeeId: string) => {
+    const employee = employees.find((emp) => emp.id === employeeId)
+    return employee ? employee.name : "Unknown Employee"
   }
 
-  const getAlertForEntry = (entryId: string) => {
-    return coverageAlerts.filter((alert) => alert.id.startsWith(entryId))
+  const hasAlert = (employeeId: string, breakNumber: 1 | 2) => {
+    return coverageAlerts.some(
+      (alert) => alert.employeeId === employeeId && alert.breakNumber === breakNumber && alert.date === selectedDate,
+    )
   }
 
-  const handleAdd = () => {
-    setFormData({
+  const openEditDialog = (entry: BreakEntry) => {
+    setEditingEntry(entry)
+    setIsAddingNew(false)
+    setIsDialogOpen(true)
+  }
+
+  const openAddDialog = () => {
+    const newEntry: BreakEntry = {
+      id: "",
       employeeId: "",
-      employeeName: "",
-      date: new Date().toISOString().split("T")[0],
+      date: selectedDate,
       break1Start: "",
       break1End: "",
       break1Coverage: "",
@@ -62,441 +72,306 @@ export function BreakTimesheetTable({
       break2End: "",
       break2Coverage: "",
       notes: "",
-    })
-    setIsAddDialogOpen(true)
-  }
-
-  const handleEdit = (entry: BreakEntry) => {
-    setEditingEntry(entry)
-    setFormData({ ...entry })
-    setIsEditDialogOpen(true)
-  }
-
-  const handleDelete = (id: string) => {
-    const updatedEntries = breakEntries.filter((entry) => entry.id !== id)
-    onBreakEntryUpdate(updatedEntries)
-    toast.success("Break entry deleted successfully")
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    setEditingEntry(newEntry)
+    setIsAddingNew(true)
+    setIsDialogOpen(true)
   }
 
   const handleSave = () => {
-    if (!formData.employeeId || !formData.date) {
-      toast.error("Please fill in required fields")
+    if (!editingEntry || !editingEntry.employeeId) {
+      toast.error("Please select an employee")
       return
     }
 
-    const selectedEmployee = employees.find((emp) => emp.id === formData.employeeId)
-    if (!selectedEmployee) {
-      toast.error("Please select a valid employee")
-      return
-    }
+    const updatedEntries = [...breakEntries]
 
-    const now = new Date().toISOString()
-
-    if (editingEntry) {
-      // Update existing entry
-      const updatedEntries = breakEntries.map((entry) =>
-        entry.id === editingEntry.id
-          ? ({
-              ...formData,
-              id: editingEntry.id,
-              employeeName: selectedEmployee.name,
-              createdAt: entry.createdAt,
-              updatedAt: now,
-            } as BreakEntry)
-          : entry,
-      )
-      onBreakEntryUpdate(updatedEntries)
-      toast.success("Break entry updated successfully")
-    } else {
-      // Add new entry
-      const newEntry: BreakEntry = {
-        ...formData,
+    if (isAddingNew) {
+      const newEntry = {
+        ...editingEntry,
         id: Date.now().toString(),
-        employeeName: selectedEmployee.name,
-        createdAt: now,
-        updatedAt: now,
-      } as BreakEntry
-
-      onBreakEntryUpdate([...breakEntries, newEntry])
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      updatedEntries.push(newEntry)
       toast.success("Break entry added successfully")
+    } else {
+      const index = updatedEntries.findIndex((entry) => entry.id === editingEntry.id)
+      if (index !== -1) {
+        updatedEntries[index] = {
+          ...editingEntry,
+          updatedAt: new Date().toISOString(),
+        }
+        toast.success("Break entry updated successfully")
+      }
     }
 
-    setIsAddDialogOpen(false)
-    setIsEditDialogOpen(false)
+    onBreakEntriesUpdate(updatedEntries)
+    setIsDialogOpen(false)
     setEditingEntry(null)
-    setFormData({})
   }
 
-  const handleCancel = () => {
-    setIsAddDialogOpen(false)
-    setIsEditDialogOpen(false)
-    setEditingEntry(null)
-    setFormData({})
+  const handleDelete = (entryId: string) => {
+    const updatedEntries = breakEntries.filter((entry) => entry.id !== entryId)
+    onBreakEntriesUpdate(updatedEntries)
+    toast.success("Break entry deleted successfully")
   }
 
-  const handleEmployeeChange = (employeeId: string) => {
-    const selectedEmployee = employees.find((emp) => emp.id === employeeId)
-    setFormData({
-      ...formData,
-      employeeId,
-      employeeName: selectedEmployee?.name || "",
-    })
+  const updateEditingEntry = (field: keyof BreakEntry, value: string) => {
+    if (editingEntry) {
+      setEditingEntry({ ...editingEntry, [field]: value })
+    }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Break Schedule</CardTitle>
-            <CardDescription>Manage employee break times and coverage assignments</CardDescription>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Break Schedule
+          </CardTitle>
+          <CardDescription>Manage employee break times and coverage assignments</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="date-select">Date:</Label>
+              <Input
+                id="date-select"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto"
+              />
+            </div>
+            <Button onClick={openAddDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Break Entry
+            </Button>
           </div>
-          <Button onClick={handleAdd}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Break Entry
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Break 1</TableHead>
-                <TableHead>Coverage 1</TableHead>
-                <TableHead>Break 2</TableHead>
-                <TableHead>Coverage 2</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {breakEntries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No break entries found. Click "Add Break Entry" to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                breakEntries.map((entry) => {
-                  const alerts = getAlertForEntry(entry.id)
-                  const hasAlerts = alerts.length > 0
 
-                  return (
-                    <TableRow key={entry.id} className={hasAlerts ? "coverage-alert" : ""}>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Break 1</TableHead>
+                  <TableHead>Coverage 1</TableHead>
+                  <TableHead>Break 2</TableHead>
+                  <TableHead>Coverage 2</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEntries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No break entries found for {selectedDate}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredEntries.map((entry) => (
+                    <TableRow
+                      key={entry.id}
+                      className={
+                        hasAlert(entry.employeeId, 1) || hasAlert(entry.employeeId, 2)
+                          ? "bg-destructive/5 border-destructive/20"
+                          : ""
+                      }
+                    >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          {entry.employeeName}
-                          {hasAlerts && <AlertCircle className="h-4 w-4 text-red-500" />}
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {getEmployeeName(entry.employeeId)}
                         </div>
                       </TableCell>
-                      <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        {entry.break1Start && entry.break1End ? (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(entry.break1Start)} - {formatTime(entry.break1End)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Not scheduled</span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {entry.break1Start && entry.break1End ? (
+                            <span>
+                              {formatTime(entry.break1Start)} - {formatTime(entry.break1End)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Not scheduled</span>
+                          )}
+                          {hasAlert(entry.employeeId, 1) && <AlertCircle className="h-4 w-4 text-destructive" />}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {entry.break1Coverage ? (
-                          <Badge variant="secondary">{entry.break1Coverage}</Badge>
+                          <Badge variant="outline">{entry.break1Coverage}</Badge>
                         ) : entry.break1Start && entry.break1End ? (
-                          <Badge variant="destructive">No Coverage</Badge>
+                          <Badge variant="destructive">No coverage</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {entry.break2Start && entry.break2End ? (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(entry.break2Start)} - {formatTime(entry.break2End)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Not scheduled</span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {entry.break2Start && entry.break2End ? (
+                            <span>
+                              {formatTime(entry.break2Start)} - {formatTime(entry.break2End)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Not scheduled</span>
+                          )}
+                          {hasAlert(entry.employeeId, 2) && <AlertCircle className="h-4 w-4 text-destructive" />}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {entry.break2Coverage ? (
-                          <Badge variant="secondary">{entry.break2Coverage}</Badge>
+                          <Badge variant="outline">{entry.break2Coverage}</Badge>
                         ) : entry.break2Start && entry.break2End ? (
-                          <Badge variant="destructive">No Coverage</Badge>
+                          <Badge variant="destructive">No coverage</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {entry.notes || <span className="text-muted-foreground">-</span>}
+                      <TableCell>
+                        {entry.notes ? (
+                          <span className="text-sm">{entry.notes.substring(0, 30)}...</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(entry)}>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(entry)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(entry.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(entry.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Add Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add Break Entry</DialogTitle>
-              <DialogDescription>Create a new break schedule entry for an employee.</DialogDescription>
-            </DialogHeader>
+      {/* Edit/Add Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{isAddingNew ? "Add Break Entry" : "Edit Break Entry"}</DialogTitle>
+            <DialogDescription>
+              {isAddingNew ? "Create a new break schedule entry" : "Modify the break schedule entry"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingEntry && (
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="employee">Employee *</Label>
-                  <Select value={formData.employeeId || ""} onValueChange={handleEmployeeChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeEmployees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date || ""}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  />
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="employee">Employee</Label>
+                <Select
+                  value={editingEntry.employeeId}
+                  onValueChange={(value) => updateEditingEntry("employeeId", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeEmployees.map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.name} - {employee.department}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <h4 className="font-medium">Break 1</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="break1Start">Start Time</Label>
-                      <Input
-                        id="break1Start"
-                        type="time"
-                        value={formData.break1Start || ""}
-                        onChange={(e) => setFormData({ ...formData, break1Start: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="break1End">End Time</Label>
-                      <Input
-                        id="break1End"
-                        type="time"
-                        value={formData.break1End || ""}
-                        onChange={(e) => setFormData({ ...formData, break1End: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="break1Coverage">Coverage</Label>
+                  <div className="grid gap-2">
+                    <Label htmlFor="break1-start">Start Time</Label>
                     <Input
-                      id="break1Coverage"
+                      id="break1-start"
+                      type="time"
+                      value={editingEntry.break1Start}
+                      onChange={(e) => updateEditingEntry("break1Start", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="break1-end">End Time</Label>
+                    <Input
+                      id="break1-end"
+                      type="time"
+                      value={editingEntry.break1End}
+                      onChange={(e) => updateEditingEntry("break1End", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="break1-coverage">Coverage</Label>
+                    <Input
+                      id="break1-coverage"
                       placeholder="Who will cover this break?"
-                      value={formData.break1Coverage || ""}
-                      onChange={(e) => setFormData({ ...formData, break1Coverage: e.target.value })}
+                      value={editingEntry.break1Coverage}
+                      onChange={(e) => updateEditingEntry("break1Coverage", e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h4 className="font-medium">Break 2</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="break2Start">Start Time</Label>
-                      <Input
-                        id="break2Start"
-                        type="time"
-                        value={formData.break2Start || ""}
-                        onChange={(e) => setFormData({ ...formData, break2Start: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="break2End">End Time</Label>
-                      <Input
-                        id="break2End"
-                        type="time"
-                        value={formData.break2End || ""}
-                        onChange={(e) => setFormData({ ...formData, break2End: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="break2Coverage">Coverage</Label>
+                  <div className="grid gap-2">
+                    <Label htmlFor="break2-start">Start Time</Label>
                     <Input
-                      id="break2Coverage"
+                      id="break2-start"
+                      type="time"
+                      value={editingEntry.break2Start}
+                      onChange={(e) => updateEditingEntry("break2Start", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="break2-end">End Time</Label>
+                    <Input
+                      id="break2-end"
+                      type="time"
+                      value={editingEntry.break2End}
+                      onChange={(e) => updateEditingEntry("break2End", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="break2-coverage">Coverage</Label>
+                    <Input
+                      id="break2-coverage"
                       placeholder="Who will cover this break?"
-                      value={formData.break2Coverage || ""}
-                      onChange={(e) => setFormData({ ...formData, break2Coverage: e.target.value })}
+                      value={editingEntry.break2Coverage}
+                      onChange={(e) => updateEditingEntry("break2Coverage", e.target.value)}
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Additional notes or comments..."
-                  value={formData.notes || ""}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Additional notes or comments"
+                  value={editingEntry.notes}
+                  onChange={(e) => updateEditingEntry("notes", e.target.value)}
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancel}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>Add Entry</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          )}
 
-        {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Edit Break Entry</DialogTitle>
-              <DialogDescription>Update the break schedule entry for {editingEntry?.employeeName}.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="employee">Employee *</Label>
-                  <Select value={formData.employeeId || ""} onValueChange={handleEmployeeChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeEmployees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date || ""}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Break 1</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="break1Start">Start Time</Label>
-                      <Input
-                        id="break1Start"
-                        type="time"
-                        value={formData.break1Start || ""}
-                        onChange={(e) => setFormData({ ...formData, break1Start: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="break1End">End Time</Label>
-                      <Input
-                        id="break1End"
-                        type="time"
-                        value={formData.break1End || ""}
-                        onChange={(e) => setFormData({ ...formData, break1End: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="break1Coverage">Coverage</Label>
-                    <Input
-                      id="break1Coverage"
-                      placeholder="Who will cover this break?"
-                      value={formData.break1Coverage || ""}
-                      onChange={(e) => setFormData({ ...formData, break1Coverage: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium">Break 2</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="break2Start">Start Time</Label>
-                      <Input
-                        id="break2Start"
-                        type="time"
-                        value={formData.break2Start || ""}
-                        onChange={(e) => setFormData({ ...formData, break2Start: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="break2End">End Time</Label>
-                      <Input
-                        id="break2End"
-                        type="time"
-                        value={formData.break2End || ""}
-                        onChange={(e) => setFormData({ ...formData, break2End: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="break2Coverage">Coverage</Label>
-                    <Input
-                      id="break2Coverage"
-                      placeholder="Who will cover this break?"
-                      value={formData.break2Coverage || ""}
-                      onChange={(e) => setFormData({ ...formData, break2Coverage: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Additional notes or comments..."
-                  value={formData.notes || ""}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancel}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>Update Entry</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>{isAddingNew ? "Add Entry" : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

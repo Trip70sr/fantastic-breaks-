@@ -5,131 +5,111 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Calendar, Users, Clock, AlertTriangle, Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
 import { BreakTimesheetTable } from "./break-timesheet-table"
 import { EmployeeManagement } from "./employee-management"
 import { DataBackupRestore } from "./data-backup-restore"
 import { EmailSharing } from "./email-sharing"
-import { Users, Calendar, AlertCircle, Moon, Sun, Settings } from "lucide-react"
-import { useTheme } from "next-themes"
 import type { Employee, BreakEntry, CoverageAlert } from "@/lib/types"
-import { mockEmployees, mockBreakEntries } from "@/lib/data"
-import { toast } from "sonner"
+import { defaultEmployees, defaultBreakEntries } from "@/lib/data"
+import { calculateBreakCoverage } from "@/lib/utils"
 
 export function EmployeeBreakDashboard() {
   const { theme, setTheme } = useTheme()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
   const [coverageAlerts, setCoverageAlerts] = useState<CoverageAlert[]>([])
-  const [mounted, setMounted] = useState(false)
+  const [activeTab, setActiveTab] = useState("schedule")
 
+  // Load data from localStorage on component mount
   useEffect(() => {
-    setMounted(true)
-    loadData()
+    const savedEmployees = localStorage.getItem("employees")
+    const savedBreakEntries = localStorage.getItem("breakEntries")
+
+    if (savedEmployees) {
+      setEmployees(JSON.parse(savedEmployees))
+    } else {
+      setEmployees(defaultEmployees)
+      localStorage.setItem("employees", JSON.stringify(defaultEmployees))
+    }
+
+    if (savedBreakEntries) {
+      setBreakEntries(JSON.parse(savedBreakEntries))
+    } else {
+      setBreakEntries(defaultBreakEntries)
+      localStorage.setItem("breakEntries", JSON.stringify(defaultBreakEntries))
+    }
   }, [])
 
+  // Generate coverage alerts
   useEffect(() => {
-    if (mounted) {
-      generateCoverageAlerts()
-    }
-  }, [breakEntries, mounted])
-
-  const loadData = () => {
-    try {
-      const savedEmployees = localStorage.getItem("employees")
-      const savedBreakEntries = localStorage.getItem("breakEntries")
-
-      if (savedEmployees) {
-        setEmployees(JSON.parse(savedEmployees))
-      } else {
-        setEmployees(mockEmployees)
-        localStorage.setItem("employees", JSON.stringify(mockEmployees))
-      }
-
-      if (savedBreakEntries) {
-        setBreakEntries(JSON.parse(savedBreakEntries))
-      } else {
-        setBreakEntries(mockBreakEntries)
-        localStorage.setItem("breakEntries", JSON.stringify(mockBreakEntries))
-      }
-    } catch (error) {
-      console.error("Error loading data:", error)
-      setEmployees(mockEmployees)
-      setBreakEntries(mockBreakEntries)
-      toast.error("Error loading data, using defaults")
-    }
-  }
-
-  const generateCoverageAlerts = () => {
     const alerts: CoverageAlert[] = []
+    const today = new Date().toISOString().split("T")[0]
 
     breakEntries.forEach((entry) => {
+      const employee = employees.find((emp) => emp.id === entry.employeeId)
+      if (!employee || !employee.isActive) return
+
       // Check break 1 coverage
-      if (entry.break1Start && entry.break1End && !entry.break1Coverage.trim()) {
+      if (entry.break1Start && entry.break1End && !entry.break1Coverage) {
         alerts.push({
           id: `${entry.id}-break1`,
           employeeId: entry.employeeId,
-          employeeName: entry.employeeName,
+          employeeName: employee.name,
           date: entry.date,
           breakNumber: 1,
-          startTime: entry.break1Start,
-          endTime: entry.break1End,
+          breakTime: `${entry.break1Start} - ${entry.break1End}`,
+          severity: entry.date === today ? "high" : "medium",
           message: `Break 1 (${entry.break1Start} - ${entry.break1End}) has no coverage assigned`,
-          severity: "error",
         })
       }
 
       // Check break 2 coverage
-      if (entry.break2Start && entry.break2End && !entry.break2Coverage.trim()) {
+      if (entry.break2Start && entry.break2End && !entry.break2Coverage) {
         alerts.push({
           id: `${entry.id}-break2`,
           employeeId: entry.employeeId,
-          employeeName: entry.employeeName,
+          employeeName: employee.name,
           date: entry.date,
           breakNumber: 2,
-          startTime: entry.break2Start,
-          endTime: entry.break2End,
+          breakTime: `${entry.break2Start} - ${entry.break2End}`,
+          severity: entry.date === today ? "high" : "medium",
           message: `Break 2 (${entry.break2Start} - ${entry.break2End}) has no coverage assigned`,
-          severity: "error",
         })
       }
     })
 
     setCoverageAlerts(alerts)
-  }
+  }, [breakEntries, employees])
 
-  const handleEmployeeUpdate = (updatedEmployees: Employee[]) => {
+  const handleEmployeesUpdate = (updatedEmployees: Employee[]) => {
     setEmployees(updatedEmployees)
     localStorage.setItem("employees", JSON.stringify(updatedEmployees))
   }
 
-  const handleBreakEntryUpdate = (updatedEntries: BreakEntry[]) => {
+  const handleBreakEntriesUpdate = (updatedEntries: BreakEntry[]) => {
     setBreakEntries(updatedEntries)
     localStorage.setItem("breakEntries", JSON.stringify(updatedEntries))
   }
 
-  const handleDataRestore = (data: { employees: Employee[]; breakEntries: BreakEntry[] }) => {
+  const handleDataImport = (data: { employees: Employee[]; breakEntries: BreakEntry[] }) => {
     setEmployees(data.employees)
     setBreakEntries(data.breakEntries)
     localStorage.setItem("employees", JSON.stringify(data.employees))
     localStorage.setItem("breakEntries", JSON.stringify(data.breakEntries))
-    toast.success("Data restored successfully")
   }
 
   const activeEmployees = employees.filter((emp) => emp.isActive)
   const todayEntries = breakEntries.filter((entry) => entry.date === new Date().toISOString().split("T")[0])
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
+  const coveragePercentage = calculateBreakCoverage(breakEntries, employees)
+  const highPriorityAlerts = coverageAlerts.filter((alert) => alert.severity === "high")
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Employee Break Management</h1>
             <p className="text-muted-foreground">Manage employee break schedules and coverage</p>
@@ -167,66 +147,70 @@ export function EmployeeBreakDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Coverage Alerts</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Coverage Rate</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{coverageAlerts.length}</div>
-              <p className="text-xs text-muted-foreground">Require attention</p>
+              <div className="text-2xl font-bold">{coveragePercentage}%</div>
+              <p className="text-xs text-muted-foreground">
+                {coveragePercentage >= 80 ? "Good coverage" : "Needs attention"}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Entries</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Coverage Alerts</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{breakEntries.length}</div>
-              <p className="text-xs text-muted-foreground">All time records</p>
+              <div className="text-2xl font-bold">{highPriorityAlerts.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {coverageAlerts.length - highPriorityAlerts.length} low priority
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Coverage Alerts */}
         {coverageAlerts.length > 0 && (
-          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
+          <Card className="border-destructive/50 bg-destructive/5">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
-                <AlertCircle className="h-5 w-5" />
-                Coverage Alerts ({coverageAlerts.length})
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Coverage Alerts
               </CardTitle>
-              <CardDescription className="text-red-600 dark:text-red-400">
-                The following breaks need coverage assignments:
-              </CardDescription>
+              <CardDescription>The following breaks need coverage assignments</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {coverageAlerts.slice(0, 5).map((alert) => (
-                  <div
-                    key={alert.id}
-                    className="flex items-center justify-between p-2 bg-white dark:bg-red-900/20 rounded border"
-                  >
-                    <div>
-                      <span className="font-medium">{alert.employeeName}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        Break {alert.breakNumber} on {new Date(alert.date).toLocaleDateString()}
-                      </span>
+                  <div key={alert.id} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{alert.employeeName}</span>
+                        <Badge variant={alert.severity === "high" ? "destructive" : "secondary"}>
+                          {alert.severity}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{alert.message}</p>
                     </div>
-                    <Badge variant="destructive">No Coverage</Badge>
+                    <div className="text-sm text-muted-foreground">{alert.date}</div>
                   </div>
                 ))}
                 {coverageAlerts.length > 5 && (
-                  <p className="text-sm text-muted-foreground">And {coverageAlerts.length - 5} more alerts...</p>
+                  <p className="text-sm text-muted-foreground text-center pt-2">
+                    And {coverageAlerts.length - 5} more alerts...
+                  </p>
                 )}
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Main Tabs */}
-        <Tabs defaultValue="schedule" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
             <TabsTrigger value="schedule">Break Schedule</TabsTrigger>
             <TabsTrigger value="employees">Employees</TabsTrigger>
             <TabsTrigger value="sharing">Email Sharing</TabsTrigger>
@@ -237,13 +221,13 @@ export function EmployeeBreakDashboard() {
             <BreakTimesheetTable
               employees={employees}
               breakEntries={breakEntries}
-              onBreakEntryUpdate={handleBreakEntryUpdate}
+              onBreakEntriesUpdate={handleBreakEntriesUpdate}
               coverageAlerts={coverageAlerts}
             />
           </TabsContent>
 
           <TabsContent value="employees" className="space-y-4">
-            <EmployeeManagement employees={employees} onEmployeeUpdate={handleEmployeeUpdate} />
+            <EmployeeManagement employees={employees} onEmployeesUpdate={handleEmployeesUpdate} />
           </TabsContent>
 
           <TabsContent value="sharing" className="space-y-4">
@@ -251,7 +235,7 @@ export function EmployeeBreakDashboard() {
           </TabsContent>
 
           <TabsContent value="data" className="space-y-4">
-            <DataBackupRestore employees={employees} breakEntries={breakEntries} onDataRestore={handleDataRestore} />
+            <DataBackupRestore employees={employees} breakEntries={breakEntries} onDataImport={handleDataImport} />
           </TabsContent>
         </Tabs>
       </div>

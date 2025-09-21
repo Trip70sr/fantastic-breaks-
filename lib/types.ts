@@ -7,15 +7,13 @@ export interface Employee {
   position: string
   email: string
   phone: string
+  hireDate: string
   isActive: boolean
-  createdAt: string
-  updatedAt: string
 }
 
 export interface BreakEntry {
   id: string
   employeeId: string
-  employeeName: string
   date: string
   break1Start: string
   break1End: string
@@ -48,14 +46,9 @@ export interface CoverageAlert {
   employeeName: string
   date: string
   breakNumber: 1 | 2
-  startTime: string
-  endTime: string
+  breakTime: string
+  severity: "high" | "medium" | "low"
   message: string
-  severity: "warning" | "error"
-  timeSlot: string
-  employeeCount: number
-  requiredCoverage: number
-  isUnderstaffed: boolean
 }
 
 export interface DepartmentStats {
