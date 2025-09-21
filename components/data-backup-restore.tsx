@@ -1,18 +1,15 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import type { Employee, BreakEntry } from "@/lib/types"
-import { Download, Upload, Database, AlertCircle, CheckCircle, FileText } from "lucide-react"
+import { Download, Upload, Database, AlertTriangle, CheckCircle, FileText } from "lucide-react"
+import { format } from "date-fns"
 
 interface DataBackupRestoreProps {
   isOpen: boolean
@@ -36,32 +33,42 @@ export default function DataBackupRestore({
     message: string
   }>({ type: null, message: "" })
 
-  const handleExportData = () => {
-    const data = {
-      employees,
-      breakEntries,
-      exportDate: new Date().toISOString(),
+  const generateBackup = () => {
+    const backup = {
       version: "1.0",
+      timestamp: new Date().toISOString(),
+      data: {
+        employees,
+        breakEntries,
+      },
+      metadata: {
+        employeeCount: employees.length,
+        breakEntryCount: breakEntries.length,
+        departments: [...new Set(employees.map((e) => e.department))],
+      },
     }
 
-    const dataStr = JSON.stringify(data, null, 2)
-    const dataBlob = new Blob([dataStr], { type: "application/json" })
-    const url = URL.createObjectURL(dataBlob)
+    return JSON.stringify(backup, null, 2)
+  }
 
+  const handleDownloadBackup = () => {
+    const backupData = generateBackup()
+    const blob = new Blob([backupData], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `employee-break-data-${new Date().toISOString().split("T")[0]}.json`
+    link.download = `employee-break-backup-${format(new Date(), "yyyy-MM-dd-HHmm")}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
-  const handleImportData = async () => {
+  const handleRestoreData = async () => {
     if (!restoreData.trim()) {
       setRestoreStatus({
         type: "error",
-        message: "Please paste the backup data first",
+        message: "Please paste backup data to restore",
       })
       return
     }
@@ -70,71 +77,71 @@ export default function DataBackupRestore({
     setRestoreStatus({ type: null, message: "" })
 
     try {
-      const data = JSON.parse(restoreData)
+      const backup = JSON.parse(restoreData)
 
-      // Validate data structure
-      if (!data.employees || !Array.isArray(data.employees)) {
-        throw new Error("Invalid data format: employees array not found")
+      // Validate backup structure
+      if (!backup.data || !backup.data.employees || !backup.data.breakEntries) {
+        throw new Error("Invalid backup format. Missing required data structure.")
       }
 
-      if (!data.breakEntries || !Array.isArray(data.breakEntries)) {
-        throw new Error("Invalid data format: breakEntries array not found")
+      // Validate employees array
+      if (!Array.isArray(backup.data.employees)) {
+        throw new Error("Invalid backup format. Employees data is not an array.")
+      }
+
+      // Validate break entries array
+      if (!Array.isArray(backup.data.breakEntries)) {
+        throw new Error("Invalid backup format. Break entries data is not an array.")
       }
 
       // Validate employee structure
-      for (const emp of data.employees) {
-        if (!emp.id || !emp.name || !emp.department) {
-          throw new Error("Invalid employee data structure")
+      for (const employee of backup.data.employees) {
+        if (!employee.id || !employee.name || !employee.department) {
+          throw new Error("Invalid employee data structure in backup.")
         }
       }
 
       // Validate break entry structure
-      for (const entry of data.breakEntries) {
+      for (const entry of backup.data.breakEntries) {
         if (!entry.id || !entry.employeeId || !entry.date || !entry.shiftStart || !entry.shiftEnd) {
-          throw new Error("Invalid break entry data structure")
+          throw new Error("Invalid break entry data structure in backup.")
         }
       }
 
-      onRestoreData(data.employees, data.breakEntries)
+      // Restore the data
+      onRestoreData(backup.data.employees, backup.data.breakEntries)
 
       setRestoreStatus({
         type: "success",
-        message: `Successfully restored ${data.employees.length} employees and ${data.breakEntries.length} break entries`,
+        message: `Successfully restored ${backup.data.employees.length} employees and ${backup.data.breakEntries.length} break entries.`,
       })
 
       setRestoreData("")
     } catch (error) {
       setRestoreStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to restore data",
+        message: error instanceof Error ? error.message : "Failed to restore backup data. Please check the format.",
       })
     } finally {
       setIsRestoring(false)
     }
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const content = e.target?.result as string
-      setRestoreData(content)
-    }
-    reader.readAsText(file)
+  const handleCopyBackup = () => {
+    const backupData = generateBackup()
+    navigator.clipboard.writeText(backupData).then(() => {
+      setRestoreStatus({
+        type: "success",
+        message: "Backup data copied to clipboard!",
+      })
+    })
   }
 
-  const dataStats = {
-    totalEmployees: employees.length,
-    totalBreakEntries: breakEntries.length,
-    lastUpdate: localStorage.getItem("lastDataUpdate"),
-    dataSize: JSON.stringify({ employees, breakEntries }).length,
-  }
+  if (!isOpen) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
@@ -142,182 +149,150 @@ export default function DataBackupRestore({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="backup" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="backup">Backup</TabsTrigger>
-            <TabsTrigger value="restore">Restore</TabsTrigger>
-            <TabsTrigger value="info">Data Info</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="backup" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Export Data
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Download a complete backup of all employee data and break entries. This file can be used to restore
-                  your data later.
-                </p>
-
-                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                  <div>
-                    <div className="text-sm font-medium">Employees</div>
-                    <div className="text-2xl font-bold text-blue-600">{employees.length}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Break Entries</div>
-                    <div className="text-2xl font-bold text-green-600">{breakEntries.length}</div>
-                  </div>
+        <div className="space-y-6">
+          {/* Current Data Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Current Data Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{employees.length}</div>
+                  <div className="text-sm text-gray-600">Employees</div>
                 </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{breakEntries.length}</div>
+                  <div className="text-sm text-gray-600">Break Entries</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {[...new Set(employees.map((e) => e.department))].length}
+                  </div>
+                  <div className="text-sm text-gray-600">Departments</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {breakEntries.filter((e) => e.break1Start && e.break1End).length}
+                  </div>
+                  <div className="text-sm text-gray-600">With Breaks</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                <Button onClick={handleExportData} className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
+          {/* Backup Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Create Backup
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Download a complete backup of your employee and break entry data. This includes all employees, their
+                break schedules, coverage assignments, and outside therapy time.
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={handleDownloadBackup} className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
                   Download Backup File
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="restore" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-4 w-4" />
-                  Import Data
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Warning:</strong> Importing data will replace all current data. Make sure to backup your
-                    current data first.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-2">
-                  <Label htmlFor="file-upload">Upload Backup File</Label>
-                  <Input id="file-upload" type="file" accept=".json" onChange={handleFileUpload} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="restore-data">Or Paste Backup Data</Label>
-                  <Textarea
-                    id="restore-data"
-                    placeholder="Paste your backup JSON data here..."
-                    value={restoreData}
-                    onChange={(e) => setRestoreData(e.target.value)}
-                    rows={10}
-                  />
-                </div>
-
-                {restoreStatus.type && (
-                  <Alert variant={restoreStatus.type === "error" ? "destructive" : "default"}>
-                    {restoreStatus.type === "success" ? (
-                      <CheckCircle className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    <AlertDescription>{restoreStatus.message}</AlertDescription>
-                  </Alert>
-                )}
-
-                <Button onClick={handleImportData} disabled={isRestoring || !restoreData.trim()} className="w-full">
-                  {isRestoring ? "Restoring..." : "Restore Data"}
+                <Button variant="outline" onClick={handleCopyBackup} className="flex items-center gap-2 bg-transparent">
+                  <FileText className="h-4 w-4" />
+                  Copy to Clipboard
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="info" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Current Data
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Total Employees:</span>
-                      <span className="font-medium">{dataStats.totalEmployees}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Break Entries:</span>
-                      <span className="font-medium">{dataStats.totalBreakEntries}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Data Size:</span>
-                      <span className="font-medium">{(dataStats.dataSize / 1024).toFixed(2)} KB</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Last Updated:</span>
-                      <span className="font-medium text-xs">
-                        {dataStats.lastUpdate ? new Date(dataStats.lastUpdate).toLocaleString() : "Never"}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Restore Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Restore from Backup
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Warning:</strong> Restoring from backup will completely replace all current data. This action
+                  cannot be undone. Make sure to create a backup of your current data first.
+                </AlertDescription>
+              </Alert>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Department Breakdown</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {Object.entries(
-                      employees.reduce(
-                        (acc, emp) => {
-                          acc[emp.department] = (acc[emp.department] || 0) + 1
-                          return acc
-                        },
-                        {} as Record<string, number>,
-                      ),
-                    ).map(([dept, count]) => (
-                      <div key={dept} className="flex justify-between">
-                        <span>{dept}:</span>
-                        <span className="font-medium">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="restore-data">Paste Backup Data</Label>
+                <Textarea
+                  id="restore-data"
+                  placeholder="Paste your backup JSON data here..."
+                  value={restoreData}
+                  onChange={(e) => setRestoreData(e.target.value)}
+                  rows={10}
+                  className="font-mono text-sm"
+                />
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Storage Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <strong>Local Storage:</strong> Data is stored locally in your browser. It will persist between
-                    sessions but may be cleared if you clear browser data.
-                  </p>
-                  <p>
-                    <strong>Backup Recommendation:</strong> Regular backups are recommended to prevent data loss.
-                  </p>
-                  <p>
-                    <strong>Data Format:</strong> Backups are saved in JSON format and include all employee information
-                    and break entries with timestamps.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              {restoreStatus.type && (
+                <Alert variant={restoreStatus.type === "error" ? "destructive" : "default"}>
+                  {restoreStatus.type === "success" ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                  <AlertDescription>{restoreStatus.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                onClick={handleRestoreData}
+                disabled={isRestoring || !restoreData.trim()}
+                className="flex items-center gap-2"
+                variant="destructive"
+              >
+                <Upload className="h-4 w-4" />
+                {isRestoring ? "Restoring..." : "Restore Data"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Instructions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Instructions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-gray-600">
+              <div>
+                <strong>To create a backup:</strong>
+                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
+                  <li>Click "Download Backup File" to save a JSON file to your computer</li>
+                  <li>Or click "Copy to Clipboard" to copy the backup data</li>
+                  <li>Store the backup file in a safe location</li>
+                </ol>
+              </div>
+              <div>
+                <strong>To restore from backup:</strong>
+                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
+                  <li>Open your backup file in a text editor and copy the contents</li>
+                  <li>Paste the backup data into the text area above</li>
+                  <li>Click "Restore Data" to replace all current data</li>
+                  <li>The page will refresh with the restored data</li>
+                </ol>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

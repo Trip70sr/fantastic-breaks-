@@ -35,8 +35,9 @@ export const initialBreakEntries: BreakEntry[] = [
     break1End: "11:15",
     break2Start: "15:00",
     break2End: "15:15",
-    coverageEmployeeId: "1",
-    coverage2EmployeeId: "4",
+    // Missing coverage - should trigger alerts
+    coverageEmployeeId: "",
+    coverage2EmployeeId: "",
   },
   {
     id: "3",
@@ -49,10 +50,22 @@ export const initialBreakEntries: BreakEntry[] = [
     break2Start: "13:30",
     break2End: "13:45",
     coverageEmployeeId: "5",
-    coverage2EmployeeId: "6",
+    // Missing coverage for break 2 - should trigger alert
+    coverage2EmployeeId: "",
     outsideTherapyStart: "12:00",
     outsideTherapyEnd: "12:30",
     outsideTherapyReason: "Client meeting",
+  },
+  {
+    id: "4",
+    employeeId: "5",
+    date: new Date().toISOString(),
+    shiftStart: "10:00",
+    shiftEnd: "14:00",
+    break1Start: "12:00",
+    break1End: "12:15",
+    // No coverage assigned - should trigger alert
+    coverageEmployeeId: "",
   },
 ]
 
@@ -165,4 +178,31 @@ export function getWorkingEmployeesForDate(entries: BreakEntry[], employees: Emp
   const dateEntries = filterEntriesByDate(entries, date)
   const workingEmployeeIds = dateEntries.map((entry) => entry.employeeId)
   return employees.filter((emp) => workingEmployeeIds.includes(emp.id))
+}
+
+// Coverage validation functions
+export function hasMissingCoverage(entry: BreakEntry): boolean {
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+  const hasCoverage1 = entry.coverageEmployeeId && entry.coverageEmployeeId !== "none"
+  const hasCoverage2 = entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none"
+
+  return (hasBreak1 && !hasCoverage1) || (hasBreak2 && !hasCoverage2)
+}
+
+export function getCoverageIssues(entry: BreakEntry): string[] {
+  const issues: string[] = []
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+  const hasCoverage1 = entry.coverageEmployeeId && entry.coverageEmployeeId !== "none"
+  const hasCoverage2 = entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none"
+
+  if (hasBreak1 && !hasCoverage1) {
+    issues.push("Break 1 missing coverage")
+  }
+  if (hasBreak2 && !hasCoverage2) {
+    issues.push("Break 2 missing coverage")
+  }
+
+  return issues
 }
