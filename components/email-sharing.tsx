@@ -2,355 +2,209 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import type { Employee, BreakEntry } from "@/lib/types"
-import { Mail, Send, Copy, CheckCircle, AlertTriangle, Users, Calendar } from "lucide-react"
-import { format } from "date-fns"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Mail, Send, Copy, Link, Clock, Users } from "lucide-react"
+import { toast } from "sonner"
 
-interface EmailSharingProps {
-  isOpen: boolean
-  onClose: () => void
-  employees: Employee[]
-  breakEntries: BreakEntry[]
+interface ShareableLink {
+  id: string
+  token: string
+  employeeName: string
+  expiresAt: string
+  createdAt: string
+  accessCount: number
 }
 
-export default function EmailSharing({ isOpen, onClose, employees, breakEntries }: EmailSharingProps) {
-  const [emailData, setEmailData] = useState({
-    to: "",
-    subject: `Break Schedule Report - ${format(new Date(), "PPP")}`,
-    message: "",
-  })
-  const [shareStatus, setShareStatus] = useState<{
-    type: "success" | "error" | null
-    message: string
-  }>({ type: null, message: "" })
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+export default function EmailSharing() {
+  const [email, setEmail] = useState("")
+  const [subject, setSubject] = useState("Break Schedule Update")
+  const [message, setMessage] = useState("")
+  const [selectedEmployee, setSelectedEmployee] = useState("")
+  const [shareableLinks, setShareableLinks] = useState<ShareableLink[]>([])
 
-  const generateReport = () => {
-    setIsGeneratingReport(true)
-
-    const today = new Date()
-    const todayEntries = breakEntries.filter((entry) => {
-      const entryDate = new Date(entry.date)
-      return entryDate.toDateString() === today.toDateString()
-    })
-
-    const totalEmployees = employees.length
-    const workingToday = todayEntries.length
-    const entriesWithBreaks = todayEntries.filter((entry) => entry.break1Start && entry.break1End).length
-    const missingCoverage = todayEntries.filter(
-      (entry) =>
-        (entry.break1Start && entry.break1End && !entry.coverageEmployeeId) ||
-        (entry.break2Start && entry.break2End && !entry.coverage2EmployeeId),
-    ).length
-
-    let report = `EMPLOYEE BREAK SCHEDULE REPORT\n`
-    report += `Generated: ${format(new Date(), "PPP 'at' p")}\n\n`
-
-    report += `SUMMARY:\n`
-    report += `• Total Employees: ${totalEmployees}\n`
-    report += `• Working Today: ${workingToday}\n`
-    report += `• Employees with Breaks: ${entriesWithBreaks}\n`
-    report += `• Missing Coverage: ${missingCoverage}\n\n`
-
-    if (todayEntries.length > 0) {
-      report += `TODAY'S SCHEDULE:\n`
-      report += `${"=".repeat(50)}\n\n`
-
-      todayEntries.forEach((entry) => {
-        const employee = employees.find((emp) => emp.id === entry.employeeId)
-        const coverageEmp1 = entry.coverageEmployeeId
-          ? employees.find((emp) => emp.id === entry.coverageEmployeeId)
-          : null
-        const coverageEmp2 = entry.coverage2EmployeeId
-          ? employees.find((emp) => emp.id === entry.coverage2EmployeeId)
-          : null
-
-        report += `${employee?.name || "Unknown"} (${employee?.department || "N/A"})\n`
-        report += `  Shift: ${entry.shiftStart} - ${entry.shiftEnd}\n`
-
-        if (entry.break1Start && entry.break1End) {
-          report += `  Break 1: ${entry.break1Start} - ${entry.break1End}`
-          if (coverageEmp1) {
-            report += ` (Coverage: ${coverageEmp1.name})`
-          } else {
-            report += ` ⚠️ NO COVERAGE`
-          }
-          report += `\n`
-        }
-
-        if (entry.break2Start && entry.break2End) {
-          report += `  Break 2: ${entry.break2Start} - ${entry.break2End}`
-          if (coverageEmp2) {
-            report += ` (Coverage: ${coverageEmp2.name})`
-          } else {
-            report += ` ⚠️ NO COVERAGE`
-          }
-          report += `\n`
-        }
-
-        if (entry.outsideTherapyStart && entry.outsideTherapyEnd) {
-          report += `  Outside Therapy: ${entry.outsideTherapyStart} - ${entry.outsideTherapyEnd}`
-          if (entry.outsideTherapyReason) {
-            report += ` (${entry.outsideTherapyReason})`
-          }
-          report += `\n`
-        }
-
-        report += `\n`
-      })
-
-      if (missingCoverage > 0) {
-        report += `COVERAGE ALERTS:\n`
-        report += `${"=".repeat(50)}\n`
-        report += `⚠️ ${missingCoverage} break(s) are missing coverage assignments.\n`
-        report += `Please review and assign coverage to ensure proper staffing.\n\n`
-      }
-    } else {
-      report += `No employees are scheduled to work today.\n\n`
-    }
-
-    report += `DEPARTMENTS:\n`
-    const departments = [...new Set(employees.map((emp) => emp.department))]
-    departments.forEach((dept) => {
-      const deptEmployees = employees.filter((emp) => emp.department === dept)
-      const workingInDept = todayEntries.filter((entry) => {
-        const emp = employees.find((e) => e.id === entry.employeeId)
-        return emp?.department === dept
-      }).length
-      report += `• ${dept}: ${deptEmployees.length} total, ${workingInDept} working today\n`
-    })
-
-    report += `\n---\n`
-    report += `This report was generated automatically by the Employee Break Management System.\n`
-    report += `For questions or updates, please contact your supervisor.`
-
-    setEmailData({
-      ...emailData,
-      message: report,
-    })
-
-    setIsGeneratingReport(false)
-  }
-
-  const handleCopyReport = () => {
-    navigator.clipboard.writeText(emailData.message).then(() => {
-      setShareStatus({
-        type: "success",
-        message: "Report copied to clipboard! You can now paste it into your email client.",
-      })
-    })
-  }
-
-  const handleSendEmail = () => {
-    if (!emailData.to.trim()) {
-      setShareStatus({
-        type: "error",
-        message: "Please enter an email address.",
-      })
+  const generateShareableLink = () => {
+    if (!selectedEmployee) {
+      toast.error("Please select an employee")
       return
     }
 
-    // Create mailto link
-    const subject = encodeURIComponent(emailData.subject)
-    const body = encodeURIComponent(emailData.message)
-    const mailtoLink = `mailto:${emailData.to}?subject=${subject}&body=${body}`
+    const token = Math.random().toString(36).substr(2, 16)
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 7) // 7 days from now
 
-    // Open default email client
-    window.location.href = mailtoLink
-
-    setShareStatus({
-      type: "success",
-      message: "Opening your default email client...",
-    })
-  }
-
-  const getQuickStats = () => {
-    const today = new Date()
-    const todayEntries = breakEntries.filter((entry) => {
-      const entryDate = new Date(entry.date)
-      return entryDate.toDateString() === today.toDateString()
-    })
-
-    return {
-      totalEmployees: employees.length,
-      workingToday: todayEntries.length,
-      withBreaks: todayEntries.filter((entry) => entry.break1Start && entry.break1End).length,
-      missingCoverage: todayEntries.filter(
-        (entry) =>
-          (entry.break1Start && entry.break1End && !entry.coverageEmployeeId) ||
-          (entry.break2Start && entry.break2End && !entry.coverage2EmployeeId),
-      ).length,
+    const newLink: ShareableLink = {
+      id: Date.now().toString(),
+      token,
+      employeeName: selectedEmployee,
+      expiresAt: expiresAt.toISOString(),
+      createdAt: new Date().toISOString(),
+      accessCount: 0,
     }
+
+    setShareableLinks((prev) => [...prev, newLink])
+
+    const shareUrl = `${window.location.origin}/shared/${token}`
+    navigator.clipboard.writeText(shareUrl)
+    toast.success("Shareable link generated and copied to clipboard")
   }
 
-  if (!isOpen) return null
+  const copyLink = (token: string) => {
+    const shareUrl = `${window.location.origin}/shared/${token}`
+    navigator.clipboard.writeText(shareUrl)
+    toast.success("Link copied to clipboard")
+  }
 
-  const stats = getQuickStats()
+  const sendEmail = () => {
+    if (!email || !subject) {
+      toast.error("Please fill in email and subject")
+      return
+    }
+
+    // In a real app, this would send an actual email
+    const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`
+    window.open(mailtoLink)
+    toast.success("Email client opened")
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const isExpired = (expiresAt: string) => {
+    return new Date(expiresAt) < new Date()
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Share Break Schedule Report
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Today's Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{stats.totalEmployees}</div>
-                  <div className="text-sm text-gray-600">Total Employees</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{stats.workingToday}</div>
-                  <div className="text-sm text-gray-600">Working Today</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{stats.withBreaks}</div>
-                  <div className="text-sm text-gray-600">With Breaks</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">{stats.missingCoverage}</div>
-                  <div className="text-sm text-gray-600">Missing Coverage</div>
-                </div>
-              </div>
-              {stats.missingCoverage > 0 && (
-                <Alert className="mt-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Coverage Alert:</strong> {stats.missingCoverage} break(s) are missing coverage assignments.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Email Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-to">To (Email Address)</Label>
-                  <Input
-                    id="email-to"
-                    type="email"
-                    placeholder="supervisor@company.com"
-                    value={emailData.to}
-                    onChange={(e) => setEmailData({ ...emailData, to: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email-subject">Subject</Label>
-                  <Input
-                    id="email-subject"
-                    value={emailData.subject}
-                    onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="email-message">Message</Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={generateReport}
-                    disabled={isGeneratingReport}
-                    className="flex items-center gap-2 bg-transparent"
-                  >
-                    <Users className="h-4 w-4" />
-                    {isGeneratingReport ? "Generating..." : "Generate Report"}
-                  </Button>
-                </div>
-                <Textarea
-                  id="email-message"
-                  placeholder="Click 'Generate Report' to create a detailed break schedule report..."
-                  value={emailData.message}
-                  onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
-                  rows={15}
-                  className="font-mono text-sm"
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Mail className="h-5 w-5" />
+          Email Sharing
+        </CardTitle>
+        <CardDescription>Share break schedules via email or generate shareable links</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-3">Send Email</h4>
+            <div className="grid gap-3">
+              <div>
+                <Label htmlFor="email">Recipient Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="employee@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
-              {shareStatus.type && (
-                <Alert variant={shareStatus.type === "error" ? "destructive" : "default"}>
-                  {shareStatus.type === "success" ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-                  <AlertDescription>{shareStatus.message}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex gap-2">
-                <Button onClick={handleSendEmail} className="flex items-center gap-2">
-                  <Send className="h-4 w-4" />
-                  Send Email
-                </Button>
-                <Button variant="outline" onClick={handleCopyReport} className="flex items-center gap-2 bg-transparent">
-                  <Copy className="h-4 w-4" />
-                  Copy Report
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>How to Share</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-gray-600">
               <div>
-                <strong>Option 1 - Email Client:</strong>
-                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
-                  <li>Enter the recipient's email address</li>
-                  <li>Click "Generate Report" to create a detailed schedule</li>
-                  <li>Click "Send Email" to open your default email client</li>
-                  <li>Review and send the email from your email client</li>
-                </ol>
+                <Label htmlFor="subject">Subject</Label>
+                <Input
+                  id="subject"
+                  placeholder="Break Schedule Update"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
               </div>
+
               <div>
-                <strong>Option 2 - Copy & Paste:</strong>
-                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
-                  <li>Click "Generate Report" to create the schedule</li>
-                  <li>Click "Copy Report" to copy the text</li>
-                  <li>Paste into any email, messaging app, or document</li>
-                  <li>Send through your preferred communication method</li>
-                </ol>
+                <Label htmlFor="message">Message</Label>
+                <Textarea
+                  id="message"
+                  placeholder="Your break schedule has been updated..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={4}
+                />
               </div>
-            </CardContent>
-          </Card>
+
+              <Button onClick={sendEmail} className="w-full">
+                <Send className="h-4 w-4 mr-2" />
+                Send Email
+              </Button>
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <h4 className="font-medium mb-3">Generate Shareable Link</h4>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="employee-select">Select Employee</Label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
+                    <SelectItem value="Michael Chen">Michael Chen</SelectItem>
+                    <SelectItem value="Emily Rodriguez">Emily Rodriguez</SelectItem>
+                    <SelectItem value="David Kim">David Kim</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button onClick={generateShareableLink} className="w-full">
+                <Link className="h-4 w-4 mr-2" />
+                Generate Link (7 days)
+              </Button>
+            </div>
+          </div>
+
+          {shareableLinks.length > 0 && (
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">Active Links</h4>
+              <div className="space-y-3">
+                {shareableLinks.map((link) => (
+                  <div key={link.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">{link.employeeName}</span>
+                        <Badge variant={isExpired(link.expiresAt) ? "destructive" : "default"}>
+                          {isExpired(link.expiresAt) ? "Expired" : "Active"}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Expires: {formatDate(link.expiresAt)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Views: {link.accessCount}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyLink(link.token)}
+                      disabled={isExpired(link.expiresAt)}
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Close</Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   )
 }

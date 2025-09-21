@@ -1,226 +1,191 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, User, Building2, Download, Eye, EyeOff } from "lucide-react"
-import { format } from "date-fns"
+import { Clock, User, Calendar, ArrowLeft, AlertCircle } from "lucide-react"
+import Link from "next/link"
+import { useParams } from "next/navigation"
 
-interface BreakEntry {
-  id: string
+interface SharedBreakData {
   employeeName: string
-  department: string
   date: string
-  startTime: string
-  endTime: string
-  duration: number
-  breakType: string
-  status: "completed" | "in-progress" | "missed"
+  break1Start: string
+  break1End: string
+  break1Coverage: string
+  break2Start: string
+  break2End: string
+  break2Coverage: string
+  notes: string
+  expiresAt: string
 }
 
-export default function SharedBreakData() {
+export default function SharedBreakPage() {
   const params = useParams()
   const token = params.token as string
-  const [breakData, setBreakData] = useState<BreakEntry[]>([])
+  const [breakData, setBreakData] = useState<SharedBreakData | null>(null)
+  const [isExpired, setIsExpired] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [showSensitiveData, setShowSensitiveData] = useState(false)
 
   useEffect(() => {
-    // Simulate loading shared data based on token
-    const loadSharedData = async () => {
-      try {
-        // In a real app, this would fetch from an API using the token
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Mock data for demonstration
-        const mockData: BreakEntry[] = [
-          {
-            id: "1",
-            employeeName: showSensitiveData ? "John Smith" : "Employee #001",
-            department: "Engineering",
-            date: "2024-01-15",
-            startTime: "10:00",
-            endTime: "10:15",
-            duration: 15,
-            breakType: "Short Break",
-            status: "completed",
-          },
-          {
-            id: "2",
-            employeeName: showSensitiveData ? "Sarah Johnson" : "Employee #002",
-            department: "Marketing",
-            date: "2024-01-15",
-            startTime: "12:00",
-            endTime: "13:00",
-            duration: 60,
-            breakType: "Lunch Break",
-            status: "completed",
-          },
-          {
-            id: "3",
-            employeeName: showSensitiveData ? "Mike Davis" : "Employee #003",
-            department: "Sales",
-            date: "2024-01-15",
-            startTime: "15:00",
-            endTime: "15:15",
-            duration: 15,
-            breakType: "Short Break",
-            status: "in-progress",
-          },
-        ]
-
-        setBreakData(mockData)
-        setLoading(false)
-      } catch (err) {
-        setError("Failed to load shared break data")
-        setLoading(false)
+    // In a real app, this would fetch from an API
+    // For demo purposes, we'll simulate shared data
+    const simulateSharedData = () => {
+      const mockData: SharedBreakData = {
+        employeeName: "Sarah Johnson",
+        date: new Date().toISOString().split("T")[0],
+        break1Start: "10:00",
+        break1End: "10:15",
+        break1Coverage: "Emily Rodriguez",
+        break2Start: "14:00",
+        break2End: "14:15",
+        break2Coverage: "Michael Chen",
+        notes: "Regular break schedule",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
       }
+
+      const expired = new Date(mockData.expiresAt) < new Date()
+      setIsExpired(expired)
+      setBreakData(mockData)
+      setLoading(false)
     }
 
-    loadSharedData()
-  }, [showSensitiveData])
+    simulateSharedData()
+  }, [token])
 
-  const exportData = () => {
-    const csvContent = [
-      ["Employee", "Department", "Date", "Start Time", "End Time", "Duration (min)", "Break Type", "Status"],
-      ...breakData.map((entry) => [
-        entry.employeeName,
-        entry.department,
-        entry.date,
-        entry.startTime,
-        entry.endTime,
-        entry.duration.toString(),
-        entry.breakType,
-        entry.status,
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `break-data-${format(new Date(), "yyyy-MM-dd")}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+  const formatTime = (time: string) => {
+    if (!time) return ""
+    const [hours, minutes] = time.split(":").map(Number)
+    const period = hours >= 12 ? "PM" : "AM"
+    const displayHours = hours % 12 || 12
+    return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-aquamarine-100 text-aquamarine-800 border-aquamarine-200"
-      case "in-progress":
-        return "bg-blue-100 text-blue-800 border-blue-200"
-      case "missed":
-        return "bg-red-100 text-red-800 border-red-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-aquamarine-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-blue-700">Loading shared break data...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading break schedule...</p>
         </div>
       </div>
     )
   }
 
-  if (error) {
+  if (isExpired || !breakData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-aquamarine-50 flex items-center justify-center">
-        <Card className="w-full max-w-md border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-800">Error</CardTitle>
-            <CardDescription className="text-red-600">{error}</CardDescription>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <CardTitle className="text-red-700">Link Expired</CardTitle>
+            <CardDescription>This shared break schedule link has expired or is no longer valid.</CardDescription>
           </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-sm text-gray-600 mb-4">
+              Please request a new link from your supervisor or HR department.
+            </p>
+            <Link href="/">
+              <Button variant="outline" className="w-full bg-transparent">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Go to Main App
+              </Button>
+            </Link>
+          </CardContent>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-aquamarine-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-blue-900 mb-2">Shared Break Data</h1>
-              <p className="text-blue-700">Viewing shared break schedule data (Token: {token.substring(0, 8)}...)</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowSensitiveData(!showSensitiveData)}
-                className="border-blue-200 text-blue-700 hover:bg-blue-50"
-              >
-                {showSensitiveData ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                {showSensitiveData ? "Hide Names" : "Show Names"}
-              </Button>
-              <Button onClick={exportData} className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <Link href="/">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to App
+            </Button>
+          </Link>
+          <Badge variant="outline">Shared Schedule</Badge>
         </div>
 
-        <div className="grid gap-4">
-          {breakData.map((entry) => (
-            <Card key={entry.id} className="border-blue-100 hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <User className="h-5 w-5 text-blue-600" />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              {breakData.employeeName}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              {formatDate(breakData.date)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Break 1</h3>
+                {breakData.break1Start && breakData.break1End ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <span>
+                        {formatTime(breakData.break1Start)} - {formatTime(breakData.break1End)}
+                      </span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-blue-900">{entry.employeeName}</h3>
-                      <div className="flex items-center gap-2 text-sm text-blue-600">
-                        <Building2 className="h-4 w-4" />
-                        {entry.department}
-                      </div>
+                    <div className="text-sm">
+                      <span className="text-gray-600">Coverage: </span>
+                      <span className="font-medium">{breakData.break1Coverage || "Not assigned"}</span>
                     </div>
                   </div>
-                  <Badge className={getStatusColor(entry.status)}>{entry.status.replace("-", " ")}</Badge>
-                </div>
+                ) : (
+                  <p className="text-gray-500 italic">No break scheduled</p>
+                )}
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-blue-500" />
-                    <span className="text-blue-700">{format(new Date(entry.date), "MMM dd, yyyy")}</span>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Break 2</h3>
+                {breakData.break2Start && breakData.break2End ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <span>
+                        {formatTime(breakData.break2Start)} - {formatTime(breakData.break2End)}
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-600">Coverage: </span>
+                      <span className="font-medium">{breakData.break2Coverage || "Not assigned"}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-blue-500" />
-                    <span className="text-blue-700">
-                      {entry.startTime} - {entry.endTime}
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-blue-700">
-                      {entry.breakType} ({entry.duration} min)
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                ) : (
+                  <p className="text-gray-500 italic">No break scheduled</p>
+                )}
+              </div>
+            </div>
 
-        {breakData.length === 0 && (
-          <Card className="border-blue-100">
-            <CardContent className="p-8 text-center">
-              <p className="text-blue-600">No break data available for this shared link.</p>
-            </CardContent>
-          </Card>
-        )}
+            {breakData.notes && (
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2">Notes</h3>
+                <p className="text-gray-700">{breakData.notes}</p>
+              </div>
+            )}
+
+            <div className="border-t pt-4 text-center">
+              <p className="text-xs text-gray-500">This link expires on {formatDate(breakData.expiresAt)}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
