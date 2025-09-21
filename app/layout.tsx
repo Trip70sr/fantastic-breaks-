@@ -3,13 +3,13 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Break Management System",
-  description: "Manage employee break schedules and coverage efficiently",
+  title: "Employee Break Management",
+  description: "Manage employee breaks and coverage schedules",
     generator: 'v0.app'
 }
 

@@ -1,3 +1,4 @@
-export default function imageLoader({ src, width, quality }) {
-  return `${src}?w=${width}&q=${quality || 75}`
+export default function myImageLoader({ src, width, quality }) {
+  const params = [`w_${width}`, `q_${quality || 75}`]
+  return `${src}?${params.join(",")}`
 }
