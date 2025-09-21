@@ -6,6 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatTime(time: string): string {
+  if (!time) return ""
+
   const [hours, minutes] = time.split(":").map(Number)
   const period = hours >= 12 ? "PM" : "AM"
   const displayHours = hours % 12 || 12
@@ -47,9 +49,15 @@ export function formatDateTime(date: string): string {
 }
 
 export function calculateBreakDuration(startTime: string, endTime: string): number {
-  const start = new Date(`2000-01-01T${startTime}:00`)
-  const end = new Date(`2000-01-01T${endTime}:00`)
-  return Math.round((end.getTime() - start.getTime()) / (1000 * 60))
+  if (!startTime || !endTime) return 0
+
+  const [startHour, startMinute] = startTime.split(":").map(Number)
+  const [endHour, endMinute] = endTime.split(":").map(Number)
+
+  const startMinutes = startHour * 60 + startMinute
+  const endMinutes = endHour * 60 + endMinute
+
+  return endMinutes - startMinutes
 }
 
 export function isValidTimeRange(startTime: string, endTime: string): boolean {
@@ -157,7 +165,7 @@ export function validateEmail(email: string): boolean {
 }
 
 export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^$$\d{3}$$ \d{3}-\d{4}$/
+  const phoneRegex = /^\$\$\d{3}\$\$ \d{3}-\d{4}$/
   return phoneRegex.test(phone)
 }
 

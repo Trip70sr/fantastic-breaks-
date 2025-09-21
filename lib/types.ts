@@ -1,29 +1,45 @@
+export type Department = "RBT" | "Operations" | "BCBA" | "Floater"
+
 export interface Employee {
   id: string
   name: string
-  department: string
+  department: Department
   position: string
   email: string
   phone: string
   hireDate: string
   status: "active" | "inactive"
   avatar?: string
+  isActive?: boolean
+  workingToday?: boolean
 }
 
 export interface BreakEntry {
   id: string
   employeeId: string
-  employeeName: string
   date: string
   breakType: "lunch" | "break" | "personal"
   startTime: string
   endTime: string
   duration: number // in minutes
-  notes?: string
+  notes: string
   location?: string
   approved: boolean
   approvedBy?: string
   approvedAt?: string
+  break1Start: string
+  break1End: string
+  break1Coverage: string
+  break2Start: string
+  break2End: string
+  break2Coverage: string
+  coverageEmployeeId?: string
+  coverage2EmployeeId?: string
+  shiftStart?: string
+  shiftEnd?: string
+  outsideTherapyStart?: string
+  outsideTherapyEnd?: string
+  outsideTherapyReason?: string
 }
 
 export interface CoverageEntry {
@@ -111,3 +127,5 @@ export interface UserPreferences {
   notifications: NotificationSettings
   defaultView: "dashboard" | "timesheet" | "coverage"
 }
+
+export type CoverageStatus = "covered" | "missing" | "none"

@@ -51,6 +51,8 @@ export default function EmployeeManagement({
         id: Date.now().toString(),
         name: newEmployee.name.trim(),
         department: newEmployee.department,
+        isActive: true,
+        workingToday: true,
       })
       setNewEmployee({ name: "", department: "RBT" })
       setIsAddEmployeeOpen(false)
@@ -88,7 +90,7 @@ export default function EmployeeManagement({
     const totalShifts = employeeEntries.length
     const shiftsWithBreaks = employeeEntries.filter((entry) => entry.break1Start && entry.break1End).length
     const coverageProvided = breakEntries.filter(
-      (entry) => entry.coverageEmployeeId === employeeId || entry.coverage2EmployeeId === employeeId,
+      (entry) => entry.break1Coverage === employeeId || entry.break2Coverage === employeeId,
     ).length
 
     return {

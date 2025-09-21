@@ -409,7 +409,7 @@ export default function BreakTimesheetTable() {
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="text-lg">{employee.name}</CardTitle>
-                            <CardDescription>{employee.position}</CardDescription>
+                            <CardDescription>{employee.department}</CardDescription>
                           </div>
                           {entry && renderCoverageBadge(entry)}
                         </div>
