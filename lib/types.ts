@@ -3,11 +3,13 @@ export type Department = "RBT" | "Operations" | "BCBA" | "Floater"
 export interface Employee {
   id: string
   name: string
-  email: string
   department: string
   position: string
-  startDate: string
+  email: string
+  phone: string
   isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface BreakEntry {
@@ -50,6 +52,10 @@ export interface CoverageAlert {
   endTime: string
   message: string
   severity: "warning" | "error"
+  timeSlot: string
+  employeeCount: number
+  requiredCoverage: number
+  isUnderstaffed: boolean
 }
 
 export interface DepartmentStats {

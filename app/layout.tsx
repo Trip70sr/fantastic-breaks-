@@ -8,8 +8,8 @@ import { Toaster } from "@/components/ui/sonner"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Break Management System",
-  description: "Manage employee break schedules and coverage efficiently",
+  title: "Employee Break Management",
+  description: "Manage employee break schedules and coverage",
     generator: 'v0.app'
 }
 
