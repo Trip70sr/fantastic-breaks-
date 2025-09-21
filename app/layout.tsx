@@ -3,21 +3,23 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import GoogleAnalytics from "@/components/google-analytics"
+import { Toaster } from "@/components/ui/sonner"
+import { GoogleAnalytics } from "@/components/google-analytics"
+import { PrivacyBanner } from "@/components/privacy-banner"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Break Protocol",
-  description: "Manage employee break schedules and compliance tracking",
-  keywords: "employee, breaks, scheduling, compliance, workplace, management",
-  authors: [{ name: "Employee Break Protocol Team" }],
+  title: "Employee Break Management System",
+  description: "Manage employee break schedules and coverage assignments efficiently",
+  keywords: "employee, breaks, scheduling, coverage, management, timesheet",
+  authors: [{ name: "Break Management Team" }],
   viewport: "width=device-width, initial-scale=1",
   robots: "index, follow",
   openGraph: {
-    title: "Employee Break Protocol",
-    description: "Manage employee break schedules and compliance tracking",
+    title: "Employee Break Management System",
+    description: "Manage employee break schedules and coverage assignments efficiently",
     type: "website",
     locale: "en_US",
   },
@@ -35,11 +37,13 @@ export default function RootLayout({
         <GoogleAnalytics />
       </head>
       <body className={inter.className}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-aquamarine-50">{children}</div>
-          </ThemeProvider>
-        </Suspense>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <Suspense fallback={null}>
+            {children}
+            <Toaster />
+            <PrivacyBanner />
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   )
