@@ -1,146 +1,180 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Employee, BreakEntry } from "./types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// No updates needed for the rest of the code
-
-export function exportToCSV(breakEntries: BreakEntry[], employees: Employee[], filename: string) {
-  const headers = [
-    "Employee Name",
-    "Department",
-    "Date",
-    "Shift Start",
-    "Shift End",
-    "Break 1 Start",
-    "Break 1 End",
-    "Break 1 Coverage",
-    "Break 2 Start",
-    "Break 2 End",
-    "Break 2 Coverage",
-    "Outside Therapy Start",
-    "Outside Therapy End",
-    "Outside Therapy Reason",
-  ]
-
-  const rows = breakEntries.map((entry) => {
-    const employee = employees.find((emp) => emp.id === entry.employeeId)
-    const coverageEmployee1 = employees.find((emp) => emp.id === entry.coverageEmployeeId)
-    const coverageEmployee2 = employees.find((emp) => emp.id === entry.coverage2EmployeeId)
-
-    return [
-      employee?.name || "Unknown",
-      employee?.department || "Unknown",
-      new Date(entry.date).toLocaleDateString(),
-      entry.shiftStart,
-      entry.shiftEnd,
-      entry.break1Start || "",
-      entry.break1End || "",
-      coverageEmployee1?.name || "",
-      entry.break2Start || "",
-      entry.break2End || "",
-      coverageEmployee2?.name || "",
-      entry.outsideTherapyStart || "",
-      entry.outsideTherapyEnd || "",
-      entry.outsideTherapyReason || "",
-    ]
-  })
-
-  const csvContent = [headers, ...rows].map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-  const link = document.createElement("a")
-  const url = URL.createObjectURL(blob)
-  link.setAttribute("href", url)
-  link.setAttribute("download", `${filename}.csv`)
-  link.style.visibility = "hidden"
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-export function calculateShiftHours(startTime: string, endTime: string): number {
-  if (!startTime || !endTime) return 0
-
-  const [startHour, startMinute] = startTime.split(":").map(Number)
-  const [endHour, endMinute] = endTime.split(":").map(Number)
-
-  const startMinutes = startHour * 60 + startMinute
-  let endMinutes = endHour * 60 + endMinute
-
-  // Handle overnight shifts
-  if (endMinutes < startMinutes) {
-    endMinutes += 24 * 60
-  }
-
-  return (endMinutes - startMinutes) / 60
-}
-
-export function formatShiftHours(hours: number): string {
-  return `${hours.toFixed(2)} hrs`
-}
-
 export function formatTime(time: string): string {
-  if (!time) return ""
-
-  const [hour, minute] = time.split(":")
-  const hourNum = Number.parseInt(hour)
-  const ampm = hourNum >= 12 ? "PM" : "AM"
-  const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum
-
-  return `${displayHour}:${minute} ${ampm}`
+  const [hours, minutes] = time.split(":").map(Number)
+  const period = hours >= 12 ? "PM" : "AM"
+  const displayHours = hours % 12 || 12
+  return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
 }
 
-export function calculateBreakDuration(startTime: string, endTime: string): number {
-  if (!startTime || !endTime) return 0
+export function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
 
-  const [startHour, startMinute] = startTime.split(":").map(Number)
-  const [endHour, endMinute] = endTime.split(":").map(Number)
-
-  const startMinutes = startHour * 60 + startMinute
-  const endMinutes = endHour * 60 + endMinute
-
-  return endMinutes - startMinutes
+  if (hours === 0) {
+    return `${mins}m`
+  } else if (mins === 0) {
+    return `${hours}h`
+  } else {
+    return `${hours}h ${mins}m`
+  }
 }
 
-export function isValidTimeFormat(time: string): boolean {
-  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
-  return timeRegex.test(time)
-}
-
-export function generateShareToken(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
-export function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
+export function formatDate(date: string): string {
+  return new Date(date).toLocaleDateString("en-US", {
+    weekday: "short",
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   })
 }
 
-export function isToday(date: Date): boolean {
-  const today = new Date()
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
+export function formatDateTime(date: string): string {
+  return new Date(date).toLocaleString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
+
+export function calculateBreakDuration(startTime: string, endTime: string): number {
+  const start = new Date(`2000-01-01T${startTime}:00`)
+  const end = new Date(`2000-01-01T${endTime}:00`)
+  return Math.round((end.getTime() - start.getTime()) / (1000 * 60))
+}
+
+export function isValidTimeRange(startTime: string, endTime: string): boolean {
+  const start = new Date(`2000-01-01T${startTime}:00`)
+  const end = new Date(`2000-01-01T${endTime}:00`)
+  return end > start
+}
+
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+export function generateShareToken(): string {
+  return Math.random().toString(36).substr(2, 16)
+}
+
+export function isDateInRange(date: string, startDate: string, endDate: string): boolean {
+  const checkDate = new Date(date)
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  return checkDate >= start && checkDate <= end
+}
+
+export function getDateRange(days: number): { start: string; end: string } {
+  const end = new Date()
+  const start = new Date()
+  start.setDate(start.getDate() - days)
+
+  return {
+    start: start.toISOString().split("T")[0],
+    end: end.toISOString().split("T")[0],
+  }
+}
+
+export function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
+  return array.reduce(
+    (groups, item) => {
+      const group = String(item[key])
+      groups[group] = groups[group] || []
+      groups[group].push(item)
+      return groups
+    },
+    {} as Record<string, T[]>,
   )
 }
 
-export function addDays(date: Date, days: number): Date {
-  const result = new Date(date)
-  result.setDate(result.getDate() + days)
-  return result
+export function sortBy<T>(array: T[], key: keyof T, direction: "asc" | "desc" = "asc"): T[] {
+  return [...array].sort((a, b) => {
+    const aVal = a[key]
+    const bVal = b[key]
+
+    if (aVal < bVal) return direction === "asc" ? -1 : 1
+    if (aVal > bVal) return direction === "asc" ? 1 : -1
+    return 0
+  })
 }
 
-export function subtractDays(date: Date, days: number): Date {
-  const result = new Date(date)
-  result.setDate(result.getDate() - days)
-  return result
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
+
+export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): (...args: Parameters<T>) => void {
+  let inThrottle: boolean
+  return (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      func(...args)
+      inThrottle = true
+      setTimeout(() => (inThrottle = false), limit)
+    }
+  }
+}
+
+export function exportToCSV(data: any[], filename: string): void {
+  if (!data.length) return
+
+  const headers = Object.keys(data[0])
+  const csvContent = [
+    headers.join(","),
+    ...data.map((row) =>
+      headers
+        .map((header) => {
+          const value = row[header]
+          return typeof value === "string" && value.includes(",") ? `"${value}"` : value
+        })
+        .join(","),
+    ),
+  ].join("\n")
+
+  const blob = new Blob([csvContent], { type: "text/csv" })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = `${filename}.csv`
+  link.click()
+  window.URL.revokeObjectURL(url)
+}
+
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function validatePhone(phone: string): boolean {
+  const phoneRegex = /^$$\d{3}$$ \d{3}-\d{4}$/
+  return phoneRegex.test(phone)
+}
+
+export function formatPhoneNumber(phone: string): string {
+  const cleaned = phone.replace(/\D/g, "")
+  const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/)
+  if (match) {
+    return `(${match[1]}) ${match[2]}-${match[3]}`
+  }
+  return phone
+}
+
+export function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength) + "..."
 }

@@ -9,7 +9,10 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Employee Break Management System",
-  description: "Manage employee breaks and coverage efficiently",
+  description: "Comprehensive break tracking and coverage management for employees",
+  keywords: "employee, breaks, timesheet, coverage, management, tracking",
+  authors: [{ name: "Employee Break Management Team" }],
+  viewport: "width=device-width, initial-scale=1",
     generator: 'v0.app'
 }
 
@@ -21,8 +24,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <div className="min-h-screen bg-background">{children}</div>
           <Toaster />
         </ThemeProvider>
       </body>
