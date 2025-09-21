@@ -1,8 +1,8 @@
 export interface Employee {
   id: number
   name: string
+  position: string
   department: string
-  shift: string
   isWorking: boolean
 }
 
