@@ -32,6 +32,7 @@ export default function EmployeeBreakDashboard() {
   const [editingEntry, setEditingEntry] = useState<BreakEntry | null>(null)
   const [newEntry, setNewEntry] = useState<Partial<BreakEntry>>({
     date: new Date().toISOString().split("T")[0],
+    employeeId: "", // Updated default value to be a non-empty string
   })
 
   const workingEmployees = employeeList.filter((emp) => emp.isWorking)
@@ -45,7 +46,7 @@ export default function EmployeeBreakDashboard() {
 
     const entry: BreakEntry = {
       id: Math.max(...entries.map((e) => e.id), 0) + 1,
-      employeeId: newEntry.employeeId,
+      employeeId: Number.parseInt(newEntry.employeeId),
       date: newEntry.date || new Date().toISOString().split("T")[0],
       break1Start: newEntry.break1Start,
       break1End: newEntry.break1End,
@@ -57,7 +58,7 @@ export default function EmployeeBreakDashboard() {
     }
 
     setEntries([...entries, entry])
-    setNewEntry({ date: new Date().toISOString().split("T")[0] })
+    setNewEntry({ date: new Date().toISOString().split("T")[0], employeeId: "" }) // Updated default value to be a non-empty string
     setIsAddDialogOpen(false)
     toast.success("Break entry added successfully")
   }
@@ -127,7 +128,7 @@ export default function EmployeeBreakDashboard() {
                 <Label htmlFor="employee" className="text-right">
                   Employee
                 </Label>
-                <Select onValueChange={(value) => setNewEntry({ ...newEntry, employeeId: Number.parseInt(value) })}>
+                <Select onValueChange={(value) => setNewEntry({ ...newEntry, employeeId: value })}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
@@ -168,6 +169,7 @@ export default function EmployeeBreakDashboard() {
                     onChange={(e) => setNewEntry({ ...newEntry, break1End: e.target.value })}
                   />
                   <Select
+                    value={newEntry.break1Coverage?.toString() || ""} // Updated default value to be a non-empty string
                     onValueChange={(value) =>
                       setNewEntry({ ...newEntry, break1Coverage: value ? Number.parseInt(value) : undefined })
                     }
@@ -204,6 +206,7 @@ export default function EmployeeBreakDashboard() {
                     onChange={(e) => setNewEntry({ ...newEntry, break2End: e.target.value })}
                   />
                   <Select
+                    value={newEntry.break2Coverage?.toString() || ""} // Updated default value to be a non-empty string
                     onValueChange={(value) =>
                       setNewEntry({ ...newEntry, break2Coverage: value ? Number.parseInt(value) : undefined })
                     }
@@ -459,7 +462,7 @@ export default function EmployeeBreakDashboard() {
                     onChange={(e) => setEditingEntry({ ...editingEntry, break1End: e.target.value })}
                   />
                   <Select
-                    value={editingEntry.break1Coverage?.toString() || ""}
+                    value={editingEntry.break1Coverage?.toString() || ""} // Updated default value to be a non-empty string
                     onValueChange={(value) =>
                       setEditingEntry({ ...editingEntry, break1Coverage: value ? Number.parseInt(value) : undefined })
                     }
@@ -494,7 +497,7 @@ export default function EmployeeBreakDashboard() {
                     onChange={(e) => setEditingEntry({ ...editingEntry, break2End: e.target.value })}
                   />
                   <Select
-                    value={editingEntry.break2Coverage?.toString() || ""}
+                    value={editingEntry.break2Coverage?.toString() || ""} // Updated default value to be a non-empty string
                     onValueChange={(value) =>
                       setEditingEntry({ ...editingEntry, break2Coverage: value ? Number.parseInt(value) : undefined })
                     }
