@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { Employee, BreakEntry } from "@/lib/types"
-import { Mail, Send, Copy, CheckCircle, AlertTriangle, Users, Calendar } from "lucide-react"
+import { Mail, Send, Copy, CheckCircle, AlertTriangle, Users, Calendar, LinkIcon } from "lucide-react"
 import { format } from "date-fns"
 
 interface EmailSharingProps {
@@ -30,6 +30,22 @@ export default function EmailSharing({ isOpen, onClose, employees, breakEntries 
     message: string
   }>({ type: null, message: "" })
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const [shareLink, setShareLink] = useState("")
+
+  const generateShareLink = () => {
+    // Generate a unique token (in production, this would be more secure)
+    const token = btoa(`${Date.now()}-${Math.random()}`).substring(0, 32)
+
+    // Get current date for filtering
+    const today = format(new Date(), "yyyy-MM-dd")
+
+    // Create share URL with search parameters
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+    const url = `${baseUrl}/shared?token=${token}&date=${today}`
+
+    setShareLink(url)
+    return url
+  }
 
   const generateReport = () => {
     setIsGeneratingReport(true)
@@ -49,8 +65,12 @@ export default function EmailSharing({ isOpen, onClose, employees, breakEntries 
         (entry.break2Start && entry.break2End && !entry.coverage2EmployeeId),
     ).length
 
+    // Generate share link
+    const link = generateShareLink()
+
     let report = `EMPLOYEE BREAK SCHEDULE REPORT\n`
-    report += `Generated: ${format(new Date(), "PPP 'at' p")}\n\n`
+    report += `Generated: ${format(new Date(), "PPP 'at' p")}\n`
+    report += `View Online: ${link}\n\n`
 
     report += `SUMMARY:\n`
     report += `• Total Employees: ${totalEmployees}\n`
@@ -128,7 +148,8 @@ export default function EmailSharing({ isOpen, onClose, employees, breakEntries 
 
     report += `\n---\n`
     report += `This report was generated automatically by the Employee Break Management System.\n`
-    report += `For questions or updates, please contact your supervisor.`
+    report += `For questions or updates, please contact your supervisor.\n\n`
+    report += `View Full Report Online: ${link}`
 
     setEmailData({
       ...emailData,
@@ -147,6 +168,18 @@ export default function EmailSharing({ isOpen, onClose, employees, breakEntries 
     })
   }
 
+  const handleCopyLink = () => {
+    if (!shareLink) {
+      generateShareLink()
+    }
+    navigator.clipboard.writeText(shareLink).then(() => {
+      setShareStatus({
+        type: "success",
+        message: "Share link copied to clipboard!",
+      })
+    })
+  }
+
   const handleSendEmail = () => {
     if (!emailData.to.trim()) {
       setShareStatus({
@@ -156,12 +189,10 @@ export default function EmailSharing({ isOpen, onClose, employees, breakEntries 
       return
     }
 
-    // Create mailto link
     const subject = encodeURIComponent(emailData.subject)
     const body = encodeURIComponent(emailData.message)
     const mailtoLink = `mailto:${emailData.to}?subject=${subject}&body=${body}`
 
-    // Open default email client
     window.location.href = mailtoLink
 
     setShareStatus({
@@ -241,6 +272,29 @@ export default function EmailSharing({ isOpen, onClose, employees, breakEntries 
               )}
             </CardContent>
           </Card>
+
+          {/* Share Link */}
+          {shareLink && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4" />
+                  Shareable Link
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <Input value={shareLink} readOnly className="font-mono text-sm" />
+                  <Button onClick={handleCopyLink} variant="outline" className="bg-transparent">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Anyone with this link can view today's break schedule (read-only)
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Email Form */}
           <Card>
@@ -324,21 +378,27 @@ export default function EmailSharing({ isOpen, onClose, employees, breakEntries 
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-gray-600">
               <div>
-                <strong>Option 1 - Email Client:</strong>
+                <strong>Option 1 - Share Link:</strong>
+                <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
+                  <li>Click "Generate Report" to create a shareable link</li>
+                  <li>Copy the link and share it via any method (email, chat, etc.)</li>
+                  <li>Recipients can view the schedule in their browser</li>
+                </ol>
+              </div>
+              <div>
+                <strong>Option 2 - Email Client:</strong>
                 <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
                   <li>Enter the recipient's email address</li>
                   <li>Click "Generate Report" to create a detailed schedule</li>
                   <li>Click "Send Email" to open your default email client</li>
-                  <li>Review and send the email from your email client</li>
                 </ol>
               </div>
               <div>
-                <strong>Option 2 - Copy & Paste:</strong>
+                <strong>Option 3 - Copy & Paste:</strong>
                 <ol className="list-decimal list-inside ml-4 mt-1 space-y-1">
                   <li>Click "Generate Report" to create the schedule</li>
                   <li>Click "Copy Report" to copy the text</li>
-                  <li>Paste into any email, messaging app, or document</li>
-                  <li>Send through your preferred communication method</li>
+                  <li>Paste into any app or document</li>
                 </ol>
               </div>
             </CardContent>
