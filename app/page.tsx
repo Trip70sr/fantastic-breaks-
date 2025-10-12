@@ -1,11 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import EmployeeBreakDashboard from "@/components/employee-break-dashboard"
 import PrivacyBanner from "@/components/privacy-banner"
 
 export default function Home() {
-  const [showPrivacyBanner, setShowPrivacyBanner] = useState(true)
+  const [showPrivacyBanner, setShowPrivacyBanner] = useState(false)
+
+  useEffect(() => {
+    const consent = localStorage.getItem("privacy-consent")
+    if (!consent) {
+      setShowPrivacyBanner(true)
+    }
+  }, [])
 
   const handleAcceptPrivacy = () => {
     setShowPrivacyBanner(false)
