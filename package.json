@@ -5,12 +5,10 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "export": "next export",
     "lint": "next lint",
     "start": "next start"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.3.4",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
@@ -30,7 +28,6 @@
     "@radix-ui/react-scroll-area": "latest",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "latest",
-    "@radix-ui/react-sheet": "^1.0.4",
     "@radix-ui/react-slider": "latest",
     "@radix-ui/react-slot": "latest",
     "@radix-ui/react-switch": "latest",
@@ -57,8 +54,7 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "latest",
-    "zod": "^3.22.4"
+    "vaul": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
@@ -66,7 +62,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.16",
+    "eslint-config-next": "14.1.0",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"

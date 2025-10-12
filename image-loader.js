@@ -1,9 +1,6 @@
 export default function imageLoader({ src, width, quality }) {
-  const params = new URLSearchParams()
-  params.set("url", src)
-  params.set("w", width.toString())
-  if (quality) {
-    params.set("q", quality.toString())
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    return src
   }
-  return `/_next/image?${params.toString()}`
+  return `${src}?w=${width}&q=${quality || 75}`
 }

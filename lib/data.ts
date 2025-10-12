@@ -1,59 +1,73 @@
 import type { Employee, BreakEntry } from "./types"
 
-export const defaultEmployees: Employee[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    department: "Therapy",
-    position: "Lead Therapist",
-    email: "sarah.johnson@company.com",
-    phone: "(555) 123-4567",
-    startDate: "2022-01-15",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Michael Chen",
-    department: "Therapy",
-    position: "Physical Therapist",
-    email: "michael.chen@company.com",
-    phone: "(555) 234-5678",
-    startDate: "2022-03-20",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Emily Rodriguez",
-    department: "Therapy",
-    position: "Occupational Therapist",
-    email: "emily.rodriguez@company.com",
-    phone: "(555) 345-6789",
-    startDate: "2022-05-10",
-    status: "active",
-  },
+export const initialEmployees: Employee[] = [
+  { id: "1", name: "Sarah Johnson", department: "RBT" },
+  { id: "2", name: "Michael Chen", department: "RBT" },
+  { id: "3", name: "Emily Rodriguez", department: "Operations" },
+  { id: "4", name: "David Kim", department: "BCBA" },
+  { id: "5", name: "Jessica Williams", department: "RBT" },
+  { id: "6", name: "Alex Thompson", department: "Floater" },
+  { id: "7", name: "Maria Garcia", department: "RBT" },
+  { id: "8", name: "James Wilson", department: "Operations" },
 ]
 
-export const defaultBreakEntries: BreakEntry[] = [
+export const initialBreakEntries: BreakEntry[] = [
   {
     id: "1",
     employeeId: "1",
-    date: new Date().toISOString().split("T")[0],
+    date: new Date().toISOString(),
     shiftStart: "08:00",
     shiftEnd: "16:00",
     break1Start: "10:00",
     break1End: "10:15",
-    coverageEmployeeId: "2",
-    break1Coverage: "Michael Chen",
     break2Start: "14:00",
     break2End: "14:15",
+    coverageEmployeeId: "2",
     coverage2EmployeeId: "3",
-    break2Coverage: "Emily Rodriguez",
+  },
+  {
+    id: "2",
+    employeeId: "2",
+    date: new Date().toISOString(),
+    shiftStart: "09:00",
+    shiftEnd: "17:00",
+    break1Start: "11:00",
+    break1End: "11:15",
+    break2Start: "15:00",
+    break2End: "15:15",
+    coverageEmployeeId: "",
+    coverage2EmployeeId: "",
+  },
+  {
+    id: "3",
+    employeeId: "4",
+    date: new Date().toISOString(),
+    shiftStart: "07:30",
+    shiftEnd: "15:30",
+    break1Start: "09:30",
+    break1End: "09:45",
+    break2Start: "13:30",
+    break2End: "13:45",
+    coverageEmployeeId: "5",
+    coverage2EmployeeId: "",
+    outsideTherapyStart: "12:00",
+    outsideTherapyEnd: "12:30",
+    outsideTherapyReason: "Client meeting",
+  },
+  {
+    id: "4",
+    employeeId: "5",
+    date: new Date().toISOString(),
+    shiftStart: "10:00",
+    shiftEnd: "14:00",
+    break1Start: "12:00",
+    break1End: "12:15",
+    coverageEmployeeId: "",
   },
 ]
 
-// Load functions for localStorage integration
 export function loadEmployees(): Employee[] {
-  if (typeof window === "undefined") return defaultEmployees
+  if (typeof window === "undefined") return initialEmployees
 
   try {
     const saved = localStorage.getItem("employees")
@@ -64,11 +78,11 @@ export function loadEmployees(): Employee[] {
     console.error("Error loading employees:", error)
   }
 
-  return defaultEmployees
+  return initialEmployees
 }
 
 export function loadBreakEntries(): BreakEntry[] {
-  if (typeof window === "undefined") return defaultBreakEntries
+  if (typeof window === "undefined") return initialBreakEntries
 
   try {
     const saved = localStorage.getItem("breakEntries")
@@ -79,7 +93,7 @@ export function loadBreakEntries(): BreakEntry[] {
     console.error("Error loading break entries:", error)
   }
 
-  return defaultBreakEntries
+  return initialBreakEntries
 }
 
 export function saveEmployees(employees: Employee[]): void {
@@ -104,7 +118,6 @@ export function saveBreakEntries(entries: BreakEntry[]): void {
   }
 }
 
-// Utility functions
 export function generateId(): string {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9)
 }
@@ -162,7 +175,6 @@ export function getWorkingEmployeesForDate(entries: BreakEntry[], employees: Emp
   return employees.filter((emp) => workingEmployeeIds.includes(emp.id))
 }
 
-// Coverage validation functions
 export function hasMissingCoverage(entry: BreakEntry): boolean {
   const hasBreak1 = entry.break1Start && entry.break1End
   const hasBreak2 = entry.break2Start && entry.break2End

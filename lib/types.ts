@@ -1,40 +1,47 @@
+export type Department = "RBT" | "Operations" | "BCBA" | "Floater"
+
 export interface Employee {
   id: string
   name: string
-  department: string
-  position: string
-  email: string
-  phone: string
-  startDate: string
-  status: "active" | "inactive"
+  department: Department
 }
 
 export interface BreakEntry {
   id: string
   employeeId: string
   date: string
-  shiftStart?: string
-  shiftEnd?: string
+  shiftStart: string
+  shiftEnd: string
   break1Start?: string
   break1End?: string
-  break1Coverage?: string
-  coverageEmployeeId?: string
   break2Start?: string
   break2End?: string
-  break2Coverage?: string
+  coverageEmployeeId?: string
   coverage2EmployeeId?: string
   outsideTherapyStart?: string
   outsideTherapyEnd?: string
   outsideTherapyReason?: string
-  notes?: string
 }
 
-export interface ShareLink {
+export interface NotificationSettings {
+  directorEmail: string
+  breakDurationThreshold: number
+  enableBreakDurationAlerts: boolean
+  enableRealTimeAlerts: boolean
+  alertCooldownMinutes: number
+}
+
+export interface BreakAlert {
   id: string
-  token: string
   employeeId: string
-  createdAt: string
-  expiresAt: string
-  permissions: "view" | "edit" | "admin"
-  recipientEmail: string
+  employeeName: string
+  breakType: "break1" | "break2"
+  breakStart: string
+  breakEnd: string
+  duration: number
+  threshold: number
+  date: string
+  timestamp: Date
+  emailSent: boolean
+  acknowledged: boolean
 }
