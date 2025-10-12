@@ -1,52 +1,28 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { EmployeeBreakDashboard } from "@/components/employee-break-dashboard"
-import { initialEmployees, initialBreakEntries } from "@/lib/data"
-import type { Employee, BreakEntry } from "@/lib/types"
+import { useState } from "react"
+import EmployeeBreakDashboard from "@/components/employee-break-dashboard"
+import PrivacyBanner from "@/components/privacy-banner"
 
 export default function Home() {
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
+  const [showPrivacyBanner, setShowPrivacyBanner] = useState(true)
 
-  useEffect(() => {
-    // Load data from localStorage or use initial data
-    const savedEmployees = localStorage.getItem("employees")
-    const savedBreakEntries = localStorage.getItem("breakEntries")
-
-    if (savedEmployees) {
-      setEmployees(JSON.parse(savedEmployees))
-    } else {
-      setEmployees(initialEmployees)
-      localStorage.setItem("employees", JSON.stringify(initialEmployees))
-    }
-
-    if (savedBreakEntries) {
-      setBreakEntries(JSON.parse(savedBreakEntries))
-    } else {
-      setBreakEntries(initialBreakEntries)
-      localStorage.setItem("breakEntries", JSON.stringify(initialBreakEntries))
-    }
-  }, [])
-
-  const updateEmployees = (newEmployees: Employee[]) => {
-    setEmployees(newEmployees)
-    localStorage.setItem("employees", JSON.stringify(newEmployees))
+  const handleAcceptPrivacy = () => {
+    setShowPrivacyBanner(false)
+    // Store consent in localStorage
+    localStorage.setItem("privacy-consent", "accepted")
   }
 
-  const updateBreakEntries = (newBreakEntries: BreakEntry[]) => {
-    setBreakEntries(newBreakEntries)
-    localStorage.setItem("breakEntries", JSON.stringify(newBreakEntries))
+  const handleDeclinePrivacy = () => {
+    setShowPrivacyBanner(false)
+    // Store decline in localStorage
+    localStorage.setItem("privacy-consent", "declined")
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <EmployeeBreakDashboard
-        employees={employees}
-        breakEntries={breakEntries}
-        onEmployeesChange={updateEmployees}
-        onBreakEntriesChange={updateBreakEntries}
-      />
+    <main className="min-h-screen">
+      <EmployeeBreakDashboard />
+      {showPrivacyBanner && <PrivacyBanner onAccept={handleAcceptPrivacy} onDecline={handleDeclinePrivacy} />}
     </main>
   )
 }

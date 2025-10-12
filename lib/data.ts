@@ -1,140 +1,190 @@
 import type { Employee, BreakEntry } from "./types"
 
-export const sampleEmployees: Employee[] = [
+export const defaultEmployees: Employee[] = [
   {
     id: "1",
-    name: "John Smith",
-    position: "Cashier",
-    department: "Front End",
-    email: "john.smith@company.com",
+    name: "Sarah Johnson",
+    department: "Therapy",
+    position: "Lead Therapist",
+    email: "sarah.johnson@company.com",
     phone: "(555) 123-4567",
-    startDate: "2023-01-15",
+    startDate: "2022-01-15",
     status: "active",
   },
   {
     id: "2",
-    name: "Sarah Johnson",
-    position: "Sales Associate",
-    department: "Sales Floor",
-    email: "sarah.johnson@company.com",
+    name: "Michael Chen",
+    department: "Therapy",
+    position: "Physical Therapist",
+    email: "michael.chen@company.com",
     phone: "(555) 234-5678",
-    startDate: "2023-02-20",
+    startDate: "2022-03-20",
     status: "active",
   },
   {
     id: "3",
-    name: "Mike Davis",
-    position: "Stock Clerk",
-    department: "Warehouse",
-    email: "mike.davis@company.com",
+    name: "Emily Rodriguez",
+    department: "Therapy",
+    position: "Occupational Therapist",
+    email: "emily.rodriguez@company.com",
     phone: "(555) 345-6789",
-    startDate: "2023-03-10",
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "Emily Wilson",
-    position: "Customer Service",
-    department: "Front End",
-    email: "emily.wilson@company.com",
-    phone: "(555) 456-7890",
-    startDate: "2023-04-05",
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "David Brown",
-    position: "Department Manager",
-    department: "Electronics",
-    email: "david.brown@company.com",
-    phone: "(555) 567-8901",
-    startDate: "2022-11-12",
+    startDate: "2022-05-10",
     status: "active",
   },
 ]
 
-export const sampleBreakEntries: BreakEntry[] = [
+export const defaultBreakEntries: BreakEntry[] = [
   {
     id: "1",
     employeeId: "1",
-    employeeName: "John Smith",
-    date: "2024-01-15",
-    shiftStart: "09:00",
-    shiftEnd: "17:00",
-    break1Start: "11:00",
-    break1End: "11:15",
-    break1Coverage: "Sarah Johnson",
-    break2Start: "14:00",
-    break2End: "14:30",
-    break2Coverage: "",
-    notes: "Lunch break coverage needed",
-    status: "completed",
-  },
-  {
-    id: "2",
-    employeeId: "2",
-    employeeName: "Sarah Johnson",
-    date: "2024-01-15",
-    shiftStart: "10:00",
-    shiftEnd: "18:00",
-    break1Start: "12:00",
-    break1End: "12:15",
-    break1Coverage: "Mike Davis",
-    break2Start: "15:00",
-    break2End: "15:30",
-    break2Coverage: "",
-    notes: "",
-    status: "completed",
-  },
-  {
-    id: "3",
-    employeeId: "3",
-    employeeName: "Mike Davis",
-    date: "2024-01-15",
+    date: new Date().toISOString().split("T")[0],
     shiftStart: "08:00",
     shiftEnd: "16:00",
     break1Start: "10:00",
     break1End: "10:15",
-    break1Coverage: "David Brown",
-    break2Start: "13:00",
-    break2End: "13:30",
-    break2Coverage: "Emily Wilson",
-    notes: "All breaks covered",
-    status: "completed",
-  },
-  {
-    id: "4",
-    employeeId: "4",
-    employeeName: "Emily Wilson",
-    date: "2024-01-16",
-    shiftStart: "11:00",
-    shiftEnd: "19:00",
-    break1Start: "13:30",
-    break1End: "13:45",
-    break1Coverage: "",
-    break2Start: "16:30",
-    break2End: "17:00",
-    break2Coverage: "",
-    notes: "Need coverage for both breaks",
-    status: "scheduled",
-  },
-  {
-    id: "5",
-    employeeId: "5",
-    employeeName: "David Brown",
-    date: "2024-01-16",
-    shiftStart: "07:00",
-    shiftEnd: "15:00",
-    break1Start: "09:30",
-    break1End: "09:45",
-    break1Coverage: "John Smith",
-    break2Start: "12:30",
-    break2End: "13:00",
-    break2Coverage: "",
-    notes: "Manager shift - lunch coverage needed",
-    status: "in-progress",
+    coverageEmployeeId: "2",
+    break1Coverage: "Michael Chen",
+    break2Start: "14:00",
+    break2End: "14:15",
+    coverage2EmployeeId: "3",
+    break2Coverage: "Emily Rodriguez",
   },
 ]
 
-export const initialEmployees = sampleEmployees
-export const initialBreakEntries = sampleBreakEntries
+// Load functions for localStorage integration
+export function loadEmployees(): Employee[] {
+  if (typeof window === "undefined") return defaultEmployees
+
+  try {
+    const saved = localStorage.getItem("employees")
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (error) {
+    console.error("Error loading employees:", error)
+  }
+
+  return defaultEmployees
+}
+
+export function loadBreakEntries(): BreakEntry[] {
+  if (typeof window === "undefined") return defaultBreakEntries
+
+  try {
+    const saved = localStorage.getItem("breakEntries")
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (error) {
+    console.error("Error loading break entries:", error)
+  }
+
+  return defaultBreakEntries
+}
+
+export function saveEmployees(employees: Employee[]): void {
+  if (typeof window === "undefined") return
+
+  try {
+    localStorage.setItem("employees", JSON.stringify(employees))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
+  } catch (error) {
+    console.error("Error saving employees:", error)
+  }
+}
+
+export function saveBreakEntries(entries: BreakEntry[]): void {
+  if (typeof window === "undefined") return
+
+  try {
+    localStorage.setItem("breakEntries", JSON.stringify(entries))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
+  } catch (error) {
+    console.error("Error saving break entries:", error)
+  }
+}
+
+// Utility functions
+export function generateId(): string {
+  return Date.now().toString() + Math.random().toString(36).substr(2, 9)
+}
+
+export function getEmployeeName(employeeId: string, employees: Employee[]): string {
+  const employee = employees.find((e) => e.id === employeeId)
+  return employee ? employee.name : "Unknown Employee"
+}
+
+export function validateBreakEntry(entry: Partial<BreakEntry>): string[] {
+  const errors: string[] = []
+
+  if (!entry.employeeId) errors.push("Employee is required")
+  if (!entry.shiftStart) errors.push("Shift start time is required")
+  if (!entry.shiftEnd) errors.push("Shift end time is required")
+  if (!entry.date) errors.push("Date is required")
+
+  return errors
+}
+
+export function getBreakStats(entries: BreakEntry[], employees: Employee[]) {
+  const totalEntries = entries.length
+  const entriesWithBreaks = entries.filter((e) => e.break1Start && e.break1End).length
+  const entriesWithCoverage = entries.filter((e) => e.coverageEmployeeId).length
+  const entriesWithSecondBreak = entries.filter((e) => e.break2Start && e.break2End).length
+
+  return {
+    totalEntries,
+    entriesWithBreaks,
+    entriesWithCoverage,
+    entriesWithSecondBreak,
+    breakCoverageRate: totalEntries > 0 ? (entriesWithCoverage / totalEntries) * 100 : 0,
+  }
+}
+
+export function filterEntriesByDate(entries: BreakEntry[], date: Date): BreakEntry[] {
+  const targetDate = date.toISOString().split("T")[0]
+  return entries.filter((entry) => {
+    const entryDate = new Date(entry.date).toISOString().split("T")[0]
+    return entryDate === targetDate
+  })
+}
+
+export function filterEntriesByEmployee(entries: BreakEntry[], employeeId: string): BreakEntry[] {
+  return entries.filter((entry) => entry.employeeId === employeeId)
+}
+
+export function getDepartments(employees: Employee[]): string[] {
+  return [...new Set(employees.map((emp) => emp.department))]
+}
+
+export function getWorkingEmployeesForDate(entries: BreakEntry[], employees: Employee[], date: Date): Employee[] {
+  const dateEntries = filterEntriesByDate(entries, date)
+  const workingEmployeeIds = dateEntries.map((entry) => entry.employeeId)
+  return employees.filter((emp) => workingEmployeeIds.includes(emp.id))
+}
+
+// Coverage validation functions
+export function hasMissingCoverage(entry: BreakEntry): boolean {
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+  const hasCoverage1 = entry.coverageEmployeeId && entry.coverageEmployeeId !== "none"
+  const hasCoverage2 = entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none"
+
+  return (hasBreak1 && !hasCoverage1) || (hasBreak2 && !hasCoverage2)
+}
+
+export function getCoverageIssues(entry: BreakEntry): string[] {
+  const issues: string[] = []
+  const hasBreak1 = entry.break1Start && entry.break1End
+  const hasBreak2 = entry.break2Start && entry.break2End
+  const hasCoverage1 = entry.coverageEmployeeId && entry.coverageEmployeeId !== "none"
+  const hasCoverage2 = entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none"
+
+  if (hasBreak1 && !hasCoverage1) {
+    issues.push("Break 1 missing coverage")
+  }
+  if (hasBreak2 && !hasCoverage2) {
+    issues.push("Break 2 missing coverage")
+  }
+
+  return issues
+}

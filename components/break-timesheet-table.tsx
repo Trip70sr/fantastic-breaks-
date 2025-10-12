@@ -1,374 +1,433 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { AlertCircle, Edit, Plus, Trash2, Clock, User } from "lucide-react"
-import type { Employee, BreakEntry, CoverageAlert } from "@/lib/types"
-import { formatTime } from "@/lib/utils"
-import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import type { Employee, BreakEntry } from "@/lib/types"
+import { calculateTotalHours, formatTime, calculateShiftHours, formatShiftHours } from "@/lib/utils"
+import { Edit, Trash2, AlertCircle } from "lucide-react"
 
 interface BreakTimesheetTableProps {
-  employees: Employee[]
   breakEntries: BreakEntry[]
-  onBreakEntriesUpdate: (entries: BreakEntry[]) => void
-  coverageAlerts: CoverageAlert[]
+  employees: Employee[]
+  workingEmployees: Employee[]
+  onUpdateEntry: (entry: BreakEntry) => void
+  onDeleteEntry: (id: string) => void
 }
 
-export function BreakTimesheetTable({
-  employees,
+export default function BreakTimesheetTable({
   breakEntries,
-  onBreakEntriesUpdate,
-  coverageAlerts,
+  employees,
+  workingEmployees,
+  onUpdateEntry,
+  onDeleteEntry,
 }: BreakTimesheetTableProps) {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0])
   const [editingEntry, setEditingEntry] = useState<BreakEntry | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isAddingNew, setIsAddingNew] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [entryToDelete, setEntryToDelete] = useState<string | null>(null)
 
-  const activeEmployees = employees.filter((emp) => emp.isActive)
-  const filteredEntries = breakEntries.filter((entry) => entry.date === selectedDate)
-
-  const getEmployeeName = (employeeId: string) => {
-    const employee = employees.find((emp) => emp.id === employeeId)
-    return employee ? employee.name : "Unknown Employee"
+  const handleEditClick = (entry: BreakEntry) => {
+    setEditingEntry({ ...entry })
+    setIsEditDialogOpen(true)
   }
 
-  const hasAlert = (employeeId: string, breakNumber: 1 | 2) => {
-    return coverageAlerts.some(
-      (alert) => alert.employeeId === employeeId && alert.breakNumber === breakNumber && alert.date === selectedDate,
+  const handleDeleteClick = (id: string) => {
+    setEntryToDelete(id)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleSaveEdit = () => {
+    if (editingEntry) {
+      onUpdateEntry(editingEntry)
+      setIsEditDialogOpen(false)
+      setEditingEntry(null)
+    }
+  }
+
+  const handleConfirmDelete = () => {
+    if (entryToDelete) {
+      onDeleteEntry(entryToDelete)
+      setIsDeleteDialogOpen(false)
+      setEntryToDelete(null)
+    }
+  }
+
+  const getEmployeeName = (id: string) => {
+    const employee = employees.find((e) => e.id === id)
+    return employee ? employee.name : "Unknown"
+  }
+
+  if (breakEntries.length === 0) {
+    return (
+      <div className="text-center py-8 border rounded-md bg-gray-50">
+        <p className="text-gray-500">No break entries found for the selected filters.</p>
+      </div>
     )
   }
 
-  const openEditDialog = (entry: BreakEntry) => {
-    setEditingEntry(entry)
-    setIsAddingNew(false)
-    setIsDialogOpen(true)
-  }
-
-  const openAddDialog = () => {
-    const newEntry: BreakEntry = {
-      id: "",
-      employeeId: "",
-      date: selectedDate,
-      break1Start: "",
-      break1End: "",
-      break1Coverage: "",
-      break2Start: "",
-      break2End: "",
-      break2Coverage: "",
-      notes: "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    setEditingEntry(newEntry)
-    setIsAddingNew(true)
-    setIsDialogOpen(true)
-  }
-
-  const handleSave = () => {
-    if (!editingEntry || !editingEntry.employeeId) {
-      toast.error("Please select an employee")
-      return
-    }
-
-    const updatedEntries = [...breakEntries]
-
-    if (isAddingNew) {
-      const newEntry = {
-        ...editingEntry,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      updatedEntries.push(newEntry)
-      toast.success("Break entry added successfully")
-    } else {
-      const index = updatedEntries.findIndex((entry) => entry.id === editingEntry.id)
-      if (index !== -1) {
-        updatedEntries[index] = {
-          ...editingEntry,
-          updatedAt: new Date().toISOString(),
-        }
-        toast.success("Break entry updated successfully")
-      }
-    }
-
-    onBreakEntriesUpdate(updatedEntries)
-    setIsDialogOpen(false)
-    setEditingEntry(null)
-  }
-
-  const handleDelete = (entryId: string) => {
-    const updatedEntries = breakEntries.filter((entry) => entry.id !== entryId)
-    onBreakEntriesUpdate(updatedEntries)
-    toast.success("Break entry deleted successfully")
-  }
-
-  const updateEditingEntry = (field: keyof BreakEntry, value: string) => {
-    if (editingEntry) {
-      setEditingEntry({ ...editingEntry, [field]: value })
-    }
-  }
-
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Break Schedule
-          </CardTitle>
-          <CardDescription>Manage employee break times and coverage assignments</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="date-select">Date:</Label>
-              <Input
-                id="date-select"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-auto"
-              />
-            </div>
-            <Button onClick={openAddDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Break Entry
-            </Button>
-          </div>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Employee</TableHead>
+            <TableHead>Shift Hours</TableHead>
+            <TableHead>Shift Start</TableHead>
+            <TableHead>Shift End</TableHead>
+            <TableHead>Break 1</TableHead>
+            <TableHead>Coverage</TableHead>
+            <TableHead>Break 2</TableHead>
+            <TableHead>Coverage</TableHead>
+            <TableHead>Outside Therapy</TableHead>
+            <TableHead>Total Hours</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {breakEntries.map((entry) => {
+            const totalHours = calculateTotalHours(entry)
+            const shiftHours = calculateShiftHours(entry.shiftStart, entry.shiftEnd)
+            const missingBreakCoverage =
+              (entry.break1Start && entry.break1End && !entry.coverageEmployeeId) ||
+              (entry.break2Start && entry.break2End && !entry.coverage2EmployeeId)
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Break 1</TableHead>
-                  <TableHead>Coverage 1</TableHead>
-                  <TableHead>Break 2</TableHead>
-                  <TableHead>Coverage 2</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEntries.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No break entries found for {selectedDate}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredEntries.map((entry) => (
-                    <TableRow
-                      key={entry.id}
-                      className={
-                        hasAlert(entry.employeeId, 1) || hasAlert(entry.employeeId, 2)
-                          ? "bg-destructive/5 border-destructive/20"
-                          : ""
-                      }
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {getEmployeeName(entry.employeeId)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {entry.break1Start && entry.break1End ? (
-                            <span>
-                              {formatTime(entry.break1Start)} - {formatTime(entry.break1End)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">Not scheduled</span>
-                          )}
-                          {hasAlert(entry.employeeId, 1) && <AlertCircle className="h-4 w-4 text-destructive" />}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {entry.break1Coverage ? (
-                          <Badge variant="outline">{entry.break1Coverage}</Badge>
-                        ) : entry.break1Start && entry.break1End ? (
-                          <Badge variant="destructive">No coverage</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {entry.break2Start && entry.break2End ? (
-                            <span>
-                              {formatTime(entry.break2Start)} - {formatTime(entry.break2End)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">Not scheduled</span>
-                          )}
-                          {hasAlert(entry.employeeId, 2) && <AlertCircle className="h-4 w-4 text-destructive" />}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {entry.break2Coverage ? (
-                          <Badge variant="outline">{entry.break2Coverage}</Badge>
-                        ) : entry.break2Start && entry.break2End ? (
-                          <Badge variant="destructive">No coverage</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {entry.notes ? (
-                          <span className="text-sm">{entry.notes.substring(0, 30)}...</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(entry)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(entry.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+            return (
+              <TableRow key={entry.id} className={missingBreakCoverage ? "bg-red-50" : ""}>
+                <TableCell className="font-medium">{getEmployeeName(entry.employeeId)}</TableCell>
+                <TableCell className="font-medium text-blue-600">{formatShiftHours(shiftHours)}</TableCell>
+                <TableCell>{formatTime(entry.shiftStart)}</TableCell>
+                <TableCell>{formatTime(entry.shiftEnd)}</TableCell>
+                <TableCell>
+                  {entry.break1Start && entry.break1End ? (
+                    `${formatTime(entry.break1Start)} - ${formatTime(entry.break1End)}`
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {entry.coverageEmployeeId ? (
+                    getEmployeeName(entry.coverageEmployeeId)
+                  ) : entry.break1Start && entry.break1End ? (
+                    <div className="flex items-center text-red-500">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      <span>Missing</span>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {entry.break2Start && entry.break2End ? (
+                    `${formatTime(entry.break2Start)} - ${formatTime(entry.break2End)}`
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {entry.coverage2EmployeeId ? (
+                    getEmployeeName(entry.coverage2EmployeeId)
+                  ) : entry.break2Start && entry.break2End ? (
+                    <div className="flex items-center text-red-500">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      <span>Missing</span>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {entry.outsideTherapyStart && entry.outsideTherapyEnd ? (
+                    <div className="text-xs">
+                      <div>
+                        {formatTime(entry.outsideTherapyStart)} - {formatTime(entry.outsideTherapyEnd)}
+                      </div>
+                      {entry.outsideTherapyReason && (
+                        <div className="text-gray-500 italic">({entry.outsideTherapyReason})</div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium text-green-600">{calculateTotalHours(entry)}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(entry)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(entry.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
 
-      {/* Edit/Add Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{isAddingNew ? "Add Break Entry" : "Edit Break Entry"}</DialogTitle>
-            <DialogDescription>
-              {isAddingNew ? "Create a new break schedule entry" : "Modify the break schedule entry"}
-            </DialogDescription>
+            <DialogTitle>Edit Break Entry</DialogTitle>
           </DialogHeader>
-
           {editingEntry && (
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="employee">Employee</Label>
-                <Select
-                  value={editingEntry.employeeId}
-                  onValueChange={(value) => updateEditingEntry("employeeId", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeEmployees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.name} - {employee.department}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Break 1</h4>
-                  <div className="grid gap-2">
-                    <Label htmlFor="break1-start">Start Time</Label>
-                    <Input
-                      id="break1-start"
-                      type="time"
-                      value={editingEntry.break1Start}
-                      onChange={(e) => updateEditingEntry("break1Start", e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="break1-end">End Time</Label>
-                    <Input
-                      id="break1-end"
-                      type="time"
-                      value={editingEntry.break1End}
-                      onChange={(e) => updateEditingEntry("break1End", e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="break1-coverage">Coverage</Label>
-                    <Input
-                      id="break1-coverage"
-                      placeholder="Who will cover this break?"
-                      value={editingEntry.break1Coverage}
-                      onChange={(e) => updateEditingEntry("break1Coverage", e.target.value)}
-                    />
-                  </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-employee">Employee</Label>
+                  <Select
+                    value={editingEntry.employeeId}
+                    onValueChange={(value) => setEditingEntry({ ...editingEntry, employeeId: value })}
+                  >
+                    <SelectTrigger id="edit-employee">
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="font-medium">Break 2</h4>
-                  <div className="grid gap-2">
-                    <Label htmlFor="break2-start">Start Time</Label>
-                    <Input
-                      id="break2-start"
-                      type="time"
-                      value={editingEntry.break2Start}
-                      onChange={(e) => updateEditingEntry("break2Start", e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="break2-end">End Time</Label>
-                    <Input
-                      id="break2-end"
-                      type="time"
-                      value={editingEntry.break2End}
-                      onChange={(e) => updateEditingEntry("break2End", e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="break2-coverage">Coverage</Label>
-                    <Input
-                      id="break2-coverage"
-                      placeholder="Who will cover this break?"
-                      value={editingEntry.break2Coverage}
-                      onChange={(e) => updateEditingEntry("break2Coverage", e.target.value)}
-                    />
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editingEntry.date.split("T")[0]}
+                    onChange={(e) => {
+                      const newDate = new Date(e.target.value)
+                      const oldDate = new Date(editingEntry.date)
+                      oldDate.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate())
+                      setEditingEntry({ ...editingEntry, date: oldDate.toISOString() })
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-shiftStart">Shift Start Time</Label>
+                  <Input
+                    id="edit-shiftStart"
+                    type="time"
+                    value={editingEntry.shiftStart}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, shiftStart: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-shiftEnd">Shift End Time</Label>
+                  <Input
+                    id="edit-shiftEnd"
+                    type="time"
+                    value={editingEntry.shiftEnd}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, shiftEnd: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Total Shift Hours</Label>
+                  <div className="px-3 py-2 bg-gray-50 border rounded-md text-sm font-medium">
+                    {formatShiftHours(calculateShiftHours(editingEntry.shiftStart, editingEntry.shiftEnd))}
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Additional notes or comments"
-                  value={editingEntry.notes}
-                  onChange={(e) => updateEditingEntry("notes", e.target.value)}
-                />
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-2">Break 1</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-break1Start">Break Start Time</Label>
+                    <Input
+                      id="edit-break1Start"
+                      type="time"
+                      value={editingEntry.break1Start || ""}
+                      onChange={(e) => setEditingEntry({ ...editingEntry, break1Start: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-break1End">Break End Time</Label>
+                    <Input
+                      id="edit-break1End"
+                      type="time"
+                      value={editingEntry.break1End || ""}
+                      onChange={(e) => setEditingEntry({ ...editingEntry, break1End: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-coverageEmployee">Coverage Employee</Label>
+                    <Select
+                      value={editingEntry.coverageEmployeeId || ""}
+                      onValueChange={(value) => setEditingEntry({ ...editingEntry, coverageEmployeeId: value })}
+                    >
+                      <SelectTrigger id="edit-coverageEmployee">
+                        <SelectValue placeholder="Select employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {workingEmployees
+                          .filter((e) => e.id !== editingEntry.employeeId)
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((employee) => (
+                            <SelectItem key={employee.id} value={employee.id}>
+                              {employee.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
+
+              {calculateShiftHours(editingEntry.shiftStart, editingEntry.shiftEnd) >= 6.5 && (
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="font-medium mb-2">Break 2 (for shifts 6.5+ hours)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-break2Start">Break Start Time</Label>
+                      <Input
+                        id="edit-break2Start"
+                        type="time"
+                        value={editingEntry.break2Start || ""}
+                        onChange={(e) => setEditingEntry({ ...editingEntry, break2Start: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-break2End">Break End Time</Label>
+                      <Input
+                        id="edit-break2End"
+                        type="time"
+                        value={editingEntry.break2End || ""}
+                        onChange={(e) => setEditingEntry({ ...editingEntry, break2End: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-coverage2Employee">Coverage Employee</Label>
+                      <Select
+                        value={editingEntry.coverage2EmployeeId || ""}
+                        onValueChange={(value) => setEditingEntry({ ...editingEntry, coverage2EmployeeId: value })}
+                      >
+                        <SelectTrigger id="edit-coverage2Employee">
+                          <SelectValue placeholder="Select employee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {workingEmployees
+                            .filter((e) => e.id !== editingEntry.employeeId)
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((employee) => (
+                              <SelectItem key={employee.id} value={employee.id}>
+                                {employee.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Outside Therapy Section */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-2">Time Outside Therapy</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-outsideTherapyStart">Start Time</Label>
+                    <Input
+                      id="edit-outsideTherapyStart"
+                      type="time"
+                      value={editingEntry.outsideTherapyStart || ""}
+                      onChange={(e) => setEditingEntry({ ...editingEntry, outsideTherapyStart: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-outsideTherapyEnd">End Time</Label>
+                    <Input
+                      id="edit-outsideTherapyEnd"
+                      type="time"
+                      value={editingEntry.outsideTherapyEnd || ""}
+                      onChange={(e) => setEditingEntry({ ...editingEntry, outsideTherapyEnd: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-outsideTherapyReason">Reason</Label>
+                    <Input
+                      id="edit-outsideTherapyReason"
+                      type="text"
+                      placeholder="e.g., Client meeting, Training"
+                      value={editingEntry.outsideTherapyReason || ""}
+                      onChange={(e) => setEditingEntry({ ...editingEntry, outsideTherapyReason: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {calculateShiftHours(editingEntry.shiftStart, editingEntry.shiftEnd) < 6.5 &&
+                calculateShiftHours(editingEntry.shiftStart, editingEntry.shiftEnd) > 0 && (
+                  <div className="border-t pt-4 mt-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <p className="text-sm text-blue-700">
+                        <strong>Note:</strong> Second break is available for shifts of 6.5 hours or longer. Current
+                        shift: {formatShiftHours(calculateShiftHours(editingEntry.shiftStart, editingEntry.shiftEnd))}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              {workingEmployees.length === 0 && (
+                <div className="border-t pt-4 mt-4">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                    <p className="text-sm text-yellow-700">
+                      <strong>Note:</strong> No employees are currently scheduled to work on this date. Coverage options
+                      will be limited to all employees.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this break entry? This action cannot be undone.</p>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
             </Button>
-            <Button onClick={handleSave}>{isAddingNew ? "Add Entry" : "Save Changes"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
