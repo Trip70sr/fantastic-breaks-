@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import type { ChartConfig } from "@/components/ui/chart"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Dynamically import chart components with SSR disabled
 export const DynamicChartContainer = dynamic(
@@ -9,8 +9,8 @@ export const DynamicChartContainer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[300px] w-full items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading chart...</div>
+      <div className="h-[300px] w-full flex items-center justify-center">
+        <Skeleton className="h-full w-full" />
       </div>
     ),
   },
@@ -35,6 +35,3 @@ export const DynamicChartLegendContent = dynamic(
   () => import("@/components/ui/chart").then((mod) => ({ default: mod.ChartLegendContent })),
   { ssr: false },
 )
-
-// Re-export types
-export type { ChartConfig }

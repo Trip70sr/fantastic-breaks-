@@ -22,7 +22,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import EmailSharing from "@/components/email-sharing"
-import TestShareDemo from "@/components/test-share-demo"
 import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
 
 export default function EmployeeBreakDashboard() {
@@ -426,11 +425,10 @@ export default function EmployeeBreakDashboard() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="timesheet" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="timesheet">Timesheet</TabsTrigger>
                 <TabsTrigger value="working">Working Today</TabsTrigger>
                 <TabsTrigger value="add">Add Entry</TabsTrigger>
-                <TabsTrigger value="test">Test Share</TabsTrigger>
               </TabsList>
               <TabsContent value="timesheet" className="mt-4">
                 <BreakTimesheetTable
@@ -459,9 +457,6 @@ export default function EmployeeBreakDashboard() {
                   onAddEntry={(entry) => handleAddBreakEntry({ ...entry, date: selectedDate.toISOString() })}
                   selectedDate={selectedDate}
                 />
-              </TabsContent>
-              <TabsContent value="test" className="mt-4">
-                <TestShareDemo />
               </TabsContent>
             </Tabs>
           </CardContent>

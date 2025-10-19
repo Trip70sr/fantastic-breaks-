@@ -11,7 +11,9 @@ export function setConsentFlag() {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem("ga-consent", "true")
-  } catch {}
+  } catch {
+    // Ignore errors
+  }
 }
 
 export function checkConsent(): boolean {
