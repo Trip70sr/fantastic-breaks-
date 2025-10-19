@@ -1,146 +1,165 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Share2, Copy, Mail, Check, Calendar, User } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "sonner"
-import { Mail, Copy, Share2, Calendar, User } from "lucide-react"
-import { getAllEmployees, getAllBreakRecords } from "@/lib/data"
+import type { BreakRecord } from "@/lib/types"
 
-export default function EmailSharing() {
+interface EmailSharingProps {
+  breaks: BreakRecord[]
+}
+
+export function EmailSharing({ breaks }: EmailSharingProps) {
+  const [copied, setCopied] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all")
   const [selectedDate, setSelectedDate] = useState<string>("all")
-  const [shareLink, setShareLink] = useState<string>("")
 
-  const employees = getAllEmployees()
-  const breakRecords = getAllBreakRecords()
-
-  // Get unique dates from break records
-  const uniqueDates = Array.from(new Set(breakRecords.map((r) => r.date)))
+  // Get unique employees and dates
+  const uniqueEmployees = Array.from(new Set(breaks.map((b) => b.employeeName)))
+  const uniqueDates = Array.from(new Set(breaks.map((b) => b.date)))
     .sort()
     .reverse()
 
   const generateShareLink = () => {
-    // Generate a simple token (in production, this should be a secure JWT or UUID)
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-
-    // Build share URL with query parameters
+    const token = Math.random().toString(36).substring(2, 15)
     const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
-    const params = new URLSearchParams()
-    params.append("token", token)
+
+    let url = `${baseUrl}/shared?token=${token}`
 
     if (selectedEmployee !== "all") {
-      params.append("employee", selectedEmployee)
+      url += `&employee=${encodeURIComponent(selectedEmployee)}`
     }
 
     if (selectedDate !== "all") {
-      params.append("date", selectedDate)
+      url += `&date=${selectedDate}`
     }
 
-    const link = `${baseUrl}/shared?${params.toString()}`
-    setShareLink(link)
-
-    toast.success("Share link generated!", {
-      description: "You can now copy or email this link",
-    })
+    return url
   }
 
-  const copyToClipboard = () => {
-    if (shareLink) {
-      navigator.clipboard.writeText(shareLink)
-      toast.success("Link copied to clipboard!")
+  const shareLink = generateShareLink()
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error("Failed to copy:", err)
     }
   }
 
-  const openEmailClient = () => {
-    if (shareLink) {
-      const subject = encodeURIComponent("Employee Break Report")
-      const body = encodeURIComponent(
-        `Here is the break report you requested:\n\n${shareLink}\n\nThis link provides access to employee break records${selectedEmployee !== "all" ? ` for ${selectedEmployee}` : ""}${selectedDate !== "all" ? ` on ${selectedDate}` : ""}.`,
-      )
-
-      window.location.href = `mailto:?subject=${subject}&body=${body}`
-    }
+  const sendEmail = () => {
+    const subject = encodeURIComponent("Break Report")
+    const body = encodeURIComponent(
+      `View the break report here:\n\n${shareLink}\n\nThis link contains break records${
+        selectedEmployee !== "all" ? ` for ${selectedEmployee}` : ""
+      }${selectedDate !== "all" ? ` on ${selectedDate}` : ""}.`,
+    )
+    window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Share2 className="mr-2 h-5 w-5" />
-          Share Break Report
-        </CardTitle>
-        <CardDescription>Generate a secure link to share break records via email</CardDescription>
+        <div className="flex items-center gap-2">
+          <Share2 className="h-5 w-5" />
+          <CardTitle>Share Break Report</CardTitle>
+        </div>
+        <CardDescription>Generate a secure link to share break records with others</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Employee Filter */}
-        <div className="space-y-2">
-          <Label htmlFor="employee-filter" className="flex items-center">
-            <User className="mr-2 h-4 w-4" />
-            Filter by Employee (Optional)
-          </Label>
-          <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-            <SelectTrigger id="employee-filter">
-              <SelectValue placeholder="All employees" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All employees</SelectItem>
-              {employees.map((emp) => (
-                <SelectItem key={emp.id} value={emp.name}>
-                  {emp.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Filter Options */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="employee-filter" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Filter by Employee
+            </Label>
+            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+              <SelectTrigger id="employee-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {uniqueEmployees.map((emp) => (
+                  <SelectItem key={emp} value={emp}>
+                    {emp}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date-filter" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Filter by Date
+            </Label>
+            <Select value={selectedDate} onValueChange={setSelectedDate}>
+              <SelectTrigger id="date-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Dates</SelectItem>
+                {uniqueDates.map((date) => (
+                  <SelectItem key={date} value={date}>
+                    {date}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Date Filter */}
+        {/* Share Link */}
         <div className="space-y-2">
-          <Label htmlFor="date-filter" className="flex items-center">
-            <Calendar className="mr-2 h-4 w-4" />
-            Filter by Date (Optional)
-          </Label>
-          <Select value={selectedDate} onValueChange={setSelectedDate}>
-            <SelectTrigger id="date-filter">
-              <SelectValue placeholder="All dates" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All dates</SelectItem>
-              {uniqueDates.map((date) => (
-                <SelectItem key={date} value={date}>
-                  {date}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Generate Button */}
-        <Button onClick={generateShareLink} className="w-full">
-          <Share2 className="mr-2 h-4 w-4" />
-          Generate Share Link
-        </Button>
-
-        {/* Share Link Display */}
-        {shareLink && (
-          <div className="space-y-3 pt-4 border-t">
-            <Label htmlFor="share-link">Share Link</Label>
-            <div className="flex gap-2">
-              <Input id="share-link" value={shareLink} readOnly className="font-mono text-sm" />
-              <Button onClick={copyToClipboard} variant="outline" size="icon">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button onClick={openEmailClient} variant="secondary" className="w-full">
-              <Mail className="mr-2 h-4 w-4" />
-              Send via Email
+          <Label htmlFor="share-link">Share Link</Label>
+          <div className="flex gap-2">
+            <Input id="share-link" value={shareLink} readOnly className="font-mono text-sm" />
+            <Button variant="outline" size="icon" onClick={copyToClipboard} className="shrink-0 bg-transparent">
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
-        )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button onClick={sendEmail} className="flex-1">
+            <Mail className="h-4 w-4 mr-2" />
+            Send via Email
+          </Button>
+          <Button variant="outline" onClick={copyToClipboard} className="flex-1 bg-transparent">
+            {copied ? (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Link
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Info */}
+        <p className="text-xs text-muted-foreground">
+          {selectedEmployee !== "all" || selectedDate !== "all" ? (
+            <>
+              This link will show {selectedEmployee !== "all" ? `records for ${selectedEmployee}` : "all employees"}
+              {selectedEmployee !== "all" && selectedDate !== "all" && " "}
+              {selectedDate !== "all" && `on ${selectedDate}`}.
+            </>
+          ) : (
+            "This link will show all break records."
+          )}
+        </p>
       </CardContent>
     </Card>
   )

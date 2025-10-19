@@ -10,16 +10,11 @@ const nextConfig = {
     loaderFile: './image-loader.js',
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/fantastic-breaks-' : '',
-  basePath: process.env.NODE_ENV === 'production' ? '/fantastic-breaks-' : '',
-  experimental: {
-    esmExternals: 'loose'
-  }
 }
 
 export default nextConfig
