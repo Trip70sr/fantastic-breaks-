@@ -1,78 +1,69 @@
 "use client"
 
 import { useEffect, useCallback } from "react"
-import { usePathname } from "next/navigation"
-import {
-  pageview,
-  trackEmployeeAction,
-  trackBreakAction,
-  trackDataAction,
-  trackSharingAction,
-  trackUIAction,
-  trackTiming,
-  trackEngagement,
-  trackSearch,
-  trackError,
-  isAnalyticsEnabled,
-} from "@/lib/gtag"
+import { usePathname, useSearchParams } from "next/navigation"
+import * as gtag from "@/lib/gtag"
 
 // Main analytics hook
 export function useAnalytics() {
-  const pathname = usePathname()
+  const trackEmployee = useCallback((action: string, label?: string) => {
+    gtag.trackEngagement(`employee_${action.toLowerCase().replace(" ", "_")}`, label)
+  }, [])
 
-  useEffect(() => {
-    if (isAnalyticsEnabled()) {
-      pageview(pathname)
-    }
-  }, [pathname])
+  const trackBreak = useCallback((action: string, label?: string) => {
+    gtag.trackEngagement(`break_${action.toLowerCase().replace(" ", "_")}`, label)
+  }, [])
 
-  const trackEvent = useCallback((action: string, category: string, label?: string, value?: number) => {
-    if (isAnalyticsEnabled()) {
-      trackUIAction(action, category)
-    }
+  const trackData = useCallback((action: string, label?: string) => {
+    gtag.trackEngagement(`data_${action.toLowerCase().replace(" ", "_")}`, label)
+  }, [])
+
+  const trackExport = useCallback((format: string, count?: number) => {
+    gtag.trackEngagement("export", format, count)
+  }, [])
+
+  const trackShare = useCallback((method: string) => {
+    gtag.trackEngagement("share", method)
   }, [])
 
   return {
-    trackEvent,
-    trackEmployeeAction,
-    trackBreakAction,
-    trackDataAction,
-    trackSharingAction,
-    trackError,
+    trackEmployee,
+    trackBreak,
+    trackData,
+    trackExport,
+    trackShare,
   }
 }
 
 // Page analytics hook (for backward compatibility)
-export function usePageAnalytics() {
+export function usePageAnalytics(pageName: string) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    if (isAnalyticsEnabled()) {
-      pageview(pathname)
+    if (pathname) {
+      const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "")
+      gtag.pageview(url)
+      gtag.trackEngagement("page_view", pageName)
     }
-  }, [pathname])
+  }, [pathname, searchParams, pageName])
 }
 
 // Data management analytics
 export function useDataAnalytics() {
-  const trackExport = useCallback((format: string) => {
-    trackDataAction("export", format)
-  }, [])
-
   const trackBackup = useCallback(() => {
-    trackDataAction("backup")
+    gtag.trackEngagement("data_backup")
   }, [])
 
   const trackRestore = useCallback(() => {
-    trackDataAction("restore")
+    gtag.trackEngagement("data_restore")
   }, [])
 
   const trackImport = useCallback((format: string) => {
-    trackDataAction("import", format)
+    gtag.trackEngagement("data_import", format)
   }, [])
 
   return {
-    trackExport,
     trackBackup,
     trackRestore,
     trackImport,
@@ -82,19 +73,19 @@ export function useDataAnalytics() {
 // Sharing analytics
 export function useSharingAnalytics() {
   const trackEmailSent = useCallback(() => {
-    trackSharingAction("email_sent")
+    gtag.trackEngagement("share_email_sent")
   }, [])
 
   const trackLinkCreated = useCallback(() => {
-    trackSharingAction("link_created")
+    gtag.trackEngagement("share_link_created")
   }, [])
 
   const trackAccessGranted = useCallback(() => {
-    trackSharingAction("access_granted")
+    gtag.trackEngagement("share_access_granted")
   }, [])
 
   const trackSharedView = useCallback(() => {
-    trackSharingAction("shared_view")
+    gtag.trackEngagement("share_shared_view")
   }, [])
 
   return {
@@ -108,11 +99,11 @@ export function useSharingAnalytics() {
 // Performance tracking
 export function usePerformanceTracking() {
   const trackLoadTime = useCallback((componentName: string, loadTime: number) => {
-    trackTiming(`${componentName}_load`, loadTime, "Component Performance")
+    gtag.trackTiming(`${componentName}_load`, loadTime, "Component Performance")
   }, [])
 
   const trackUserAction = useCallback((actionName: string, duration: number) => {
-    trackTiming(`${actionName}_duration`, duration, "User Actions")
+    gtag.trackTiming(`${actionName}_duration`, duration, "User Actions")
   }, [])
 
   return {
@@ -124,11 +115,11 @@ export function usePerformanceTracking() {
 // Feature engagement tracking
 export function useEngagementTracking() {
   const trackFeatureUsage = useCallback((featureName: string, duration?: number) => {
-    trackEngagement(featureName, duration)
+    gtag.trackEngagement(featureName, duration)
   }, [])
 
   const trackUserFlow = useCallback((flowName: string, stepNumber: number) => {
-    trackUIAction(`${flowName}_step_${stepNumber}`, "User Flow")
+    gtag.trackEngagement(`${flowName}_step_${stepNumber}`, "User Flow")
   }, [])
 
   return {
@@ -140,11 +131,11 @@ export function useEngagementTracking() {
 // Search and filter analytics
 export function useSearchAnalytics() {
   const trackSearchQuery = useCallback((searchType: string, resultsCount: number) => {
-    trackSearch(searchType, resultsCount)
+    gtag.trackSearch(searchType, resultsCount)
   }, [])
 
   const trackFilterUsage = useCallback((filterType: string, filterValue: string) => {
-    trackUIAction(`filter_${filterType}`, `Filter Usage: ${filterValue}`)
+    gtag.trackEngagement(`filter_${filterType}`, `Filter Usage: ${filterValue}`)
   }, [])
 
   return {
@@ -156,11 +147,11 @@ export function useSearchAnalytics() {
 // Error tracking hook
 export function useErrorTracking() {
   const trackApplicationError = useCallback((error: Error, context?: string) => {
-    trackError(error.message, context, false)
+    gtag.trackError(error.message, context, false)
   }, [])
 
   const trackFatalError = useCallback((error: Error, context?: string) => {
-    trackError(error.message, context, true)
+    gtag.trackError(error.message, context, true)
   }, [])
 
   return {

@@ -84,3 +84,12 @@ export const trackSharingAction = (action: "email_sent" | "link_created" | "acce
     label: action,
   })
 }
+
+export const trackEngagement = (action: string, label?: string, value?: number) => {
+  event({
+    action,
+    category: "User Engagement",
+    label,
+    value,
+  })
+}
