@@ -34,7 +34,6 @@ function SharedPageContent() {
 
       setEmployees(loadedEmployees)
 
-      // Apply filters
       let filteredEntries = loadedEntries
 
       if (employeeFilter) {
@@ -76,7 +75,14 @@ function SharedPageContent() {
   const coverageRate = totalBreaks > 0 ? ((totalCovered / totalBreaks) * 100).toFixed(1) : "0"
 
   if (loading) {
-    return null
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-muted-foreground">Loading break report...</p>
+        </div>
+      </div>
+    )
   }
 
   if (error) {
@@ -106,7 +112,6 @@ function SharedPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700">
       <div className="container mx-auto py-8 px-4 max-w-7xl">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -125,7 +130,6 @@ function SharedPageContent() {
 
           <Separator className="my-4" />
 
-          {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card>
               <CardHeader className="pb-3">
@@ -164,7 +168,6 @@ function SharedPageContent() {
             </Card>
           </div>
 
-          {/* Privacy Control */}
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -180,7 +183,6 @@ function SharedPageContent() {
           </Card>
         </div>
 
-        {/* Break Entries Table */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -287,7 +289,6 @@ function SharedPageContent() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
           <p>This is a shared view of employee break data.</p>
           <p className="mt-1">Generated on {new Date().toLocaleString()}</p>
@@ -299,7 +300,16 @@ function SharedPageContent() {
 
 export default function SharedPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="text-muted-foreground">Loading break report...</p>
+          </div>
+        </div>
+      }
+    >
       <SharedPageContent />
     </Suspense>
   )

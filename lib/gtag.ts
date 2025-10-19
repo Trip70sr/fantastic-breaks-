@@ -2,41 +2,29 @@
 
 /**
  * Google Analytics helper for the Employee Break Protocol App
- * -----------------------------------------------------------
- *  • Works in both development and production
- *  • Queues calls until Google's real gtag.js loads
- *  • Respects an explicit user-consent flag stored in localStorage
  */
 
 declare global {
-  // eslint-disable-next-line no-var
-  var dataLayer: any[] | undefined
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  var gtag: Function | undefined
+  interface Window {
+    dataLayer: any[]
+    gtag: (...args: any[]) => void
+  }
 }
 
 export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || ""
 
-/* ------------------------------------------------------------------ */
-/*  ⚙️  SAFETY LAYER – make sure window.gtag always exists            */
-/* ------------------------------------------------------------------ */
 export function ensureGtag(): void {
   if (typeof window === "undefined") return
 
-  // Ensure the dataLayer array exists (gtag.js uses this)
   window.dataLayer = window.dataLayer || []
 
-  // Stub window.gtag so we can call it safely before the script loads
   if (typeof window.gtag !== "function") {
-    window.gtag = function stubGtag(...args: unknown[]) {
-      window.dataLayer!.push(args)
+    window.gtag = function stubGtag(...args: any[]) {
+      window.dataLayer.push(args)
     }
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  🔐  CONSENT & ENABLEMENT                                          */
-/* ------------------------------------------------------------------ */
 export const isAnalyticsEnabled = (): boolean => {
   if (!GA_TRACKING_ID) return false
   if (typeof window === "undefined") return false
@@ -45,9 +33,6 @@ export const isAnalyticsEnabled = (): boolean => {
   return consent === "accepted"
 }
 
-/* ------------------------------------------------------------------ */
-/*  🚀  INITIALISATION                                                */
-/* ------------------------------------------------------------------ */
 export function initGA(): void {
   ensureGtag()
 
@@ -73,9 +58,6 @@ export function initGA(): void {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  ✅  GRANT CONSENT                                                 */
-/* ------------------------------------------------------------------ */
 export function grantAnalyticsConsent(): void {
   ensureGtag()
 
@@ -84,9 +66,6 @@ export function grantAnalyticsConsent(): void {
   window.gtag("consent", "update", { analytics_storage: "granted" })
 }
 
-/* ------------------------------------------------------------------ */
-/*  📄  PAGE VIEWS & EVENTS                                           */
-/* ------------------------------------------------------------------ */
 export const pageview = (url: string): void => {
   if (!isAnalyticsEnabled()) return
   ensureGtag()
@@ -114,10 +93,6 @@ export const event = ({
     value,
   })
 }
-
-/* ------------------------------------------------------------------ */
-/*  🔧  DOMAIN-SPECIFIC HELPERS                                       */
-/* ------------------------------------------------------------------ */
 
 export const trackEmployeeAction = (action: "add" | "edit" | "delete" | "import", count?: number): void =>
   event({
@@ -177,9 +152,6 @@ export const trackSearch = (searchType: string, resultsCount?: number): void =>
     value: resultsCount,
   })
 
-/* ------------------------------------------------------------------ */
-/*  🛑  ERROR & EXCEPTION TRACKING                                    */
-/* ------------------------------------------------------------------ */
 export const trackError = (message: string, context?: string, fatal = false): void => {
   if (!isAnalyticsEnabled()) return
   ensureGtag()
