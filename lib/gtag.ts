@@ -25,6 +25,9 @@ export function checkConsent(): boolean {
   }
 }
 
+// Alias for compatibility with existing code
+export const isAnalyticsEnabled = checkConsent
+
 export const pageview = (url: string) => {
   if (!checkConsent()) return
   gtag("config", GA_TRACKING_ID, { page_path: url })
