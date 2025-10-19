@@ -1,3 +1,5 @@
+"use client"
+
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { BreakEntry, Employee } from "./types"
@@ -6,103 +8,49 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatTime(timeString?: string): string {
-  if (!timeString) return ""
-
-  try {
-    const [hours, minutes] = timeString.split(":")
-    const hour = Number.parseInt(hours, 10)
-    const ampm = hour >= 12 ? "PM" : "AM"
-    const formattedHour = hour % 12 || 12
-
-    return `${formattedHour}:${minutes} ${ampm}`
-  } catch (error) {
-    return timeString
-  }
-}
-
-export function calculateBreakDuration(start?: string, end?: string): number {
-  if (!start || !end) return 0
-
-  const [startHours, startMinutes] = start.split(":").map(Number)
-  const [endHours, endMinutes] = end.split(":").map(Number)
-
-  const startTotalMinutes = startHours * 60 + startMinutes
-  const endTotalMinutes = endHours * 60 + endMinutes
-
-  const duration =
-    endTotalMinutes >= startTotalMinutes
-      ? endTotalMinutes - startTotalMinutes
-      : 24 * 60 - startTotalMinutes + endTotalMinutes
-
-  return duration
+export function formatTime(time: string | undefined): string {
+  if (!time) return "-"
+  return time
 }
 
 export function calculateTotalHours(entry: BreakEntry): string {
-  const {
-    shiftStart,
-    shiftEnd,
-    break1Start,
-    break1End,
-    break2Start,
-    break2End,
-    outsideTherapyStart,
-    outsideTherapyEnd,
-  } = entry
+  if (!entry.shiftStart || !entry.shiftEnd) return "0.00"
 
-  if (!shiftStart || !shiftEnd) return "0.00"
+  const start = new Date(`2000-01-01T${entry.shiftStart}`)
+  const end = new Date(`2000-01-01T${entry.shiftEnd}`)
 
-  const [startHours, startMinutes] = shiftStart.split(":").map(Number)
-  const [endHours, endMinutes] = shiftEnd.split(":").map(Number)
+  let hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
 
-  const startTotalMinutes = startHours * 60 + startMinutes
-  const endTotalMinutes = endHours * 60 + endMinutes
+  // Subtract break times
+  if (entry.break1Start && entry.break1End) {
+    const break1Start = new Date(`2000-01-01T${entry.break1Start}`)
+    const break1End = new Date(`2000-01-01T${entry.break1End}`)
+    hours -= (break1End.getTime() - break1Start.getTime()) / (1000 * 60 * 60)
+  }
 
-  const shiftDurationMinutes =
-    endTotalMinutes >= startTotalMinutes
-      ? endTotalMinutes - startTotalMinutes
-      : 24 * 60 - startTotalMinutes + endTotalMinutes
+  if (entry.break2Start && entry.break2End) {
+    const break2Start = new Date(`2000-01-01T${entry.break2Start}`)
+    const break2End = new Date(`2000-01-01T${entry.break2End}`)
+    hours -= (break2End.getTime() - break2Start.getTime()) / (1000 * 60 * 60)
+  }
 
-  const break1Duration = calculateBreakDuration(break1Start, break1End)
-  const break2Duration = calculateBreakDuration(break2Start, break2End)
-  const outsideTherapyDuration = calculateBreakDuration(outsideTherapyStart, outsideTherapyEnd)
-
-  const totalMinutes = shiftDurationMinutes - break1Duration - break2Duration - outsideTherapyDuration
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-
-  return `${hours}.${minutes.toString().padStart(2, "0")}`
+  return hours.toFixed(2)
 }
 
-export function calculateShiftHours(shiftStart?: string, shiftEnd?: string): number {
-  if (!shiftStart || !shiftEnd) return 0
-
-  const [startHours, startMinutes] = shiftStart.split(":").map(Number)
-  const [endHours, endMinutes] = shiftEnd.split(":").map(Number)
-
-  const startTotalMinutes = startHours * 60 + startMinutes
-  const endTotalMinutes = endHours * 60 + endMinutes
-
-  const shiftDurationMinutes =
-    endTotalMinutes >= startTotalMinutes
-      ? endTotalMinutes - startTotalMinutes
-      : 24 * 60 - startTotalMinutes + endTotalMinutes
-
-  return shiftDurationMinutes / 60
+export function calculateShiftHours(start: string, end: string, breakMinutes = 0): number {
+  const startTime = new Date(`2000-01-01T${start}`)
+  const endTime = new Date(`2000-01-01T${end}`)
+  const totalMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+  return (totalMinutes - breakMinutes) / 60
 }
 
 export function formatShiftHours(hours: number): string {
-  const wholeHours = Math.floor(hours)
-  const minutes = Math.round((hours - wholeHours) * 60)
-
-  if (minutes === 0) {
-    return `${wholeHours}.00 hrs`
-  } else {
-    return `${wholeHours}.${minutes.toString().padStart(2, "0")} hrs`
-  }
+  const h = Math.floor(hours)
+  const m = Math.round((hours - h) * 60)
+  return `${h}h ${m}m`
 }
 
-export function exportToCSV(breakEntries: BreakEntry[], employees: Employee[], filename: string) {
+export function exportToCSV(entries: BreakEntry[], employees: Employee[], filename = "break-report"): void {
   if (typeof window === "undefined") return
 
   const headers = [
@@ -113,61 +61,40 @@ export function exportToCSV(breakEntries: BreakEntry[], employees: Employee[], f
     "Shift End",
     "Break 1 Start",
     "Break 1 End",
-    "Break 1 Coverage",
+    "Coverage 1",
     "Break 2 Start",
     "Break 2 End",
-    "Break 2 Coverage",
-    "Outside Therapy Start",
-    "Outside Therapy End",
-    "Outside Therapy Reason",
+    "Coverage 2",
     "Total Hours",
   ]
 
-  const rows = breakEntries.map((entry) => {
+  const rows = entries.map((entry) => {
     const employee = employees.find((e) => e.id === entry.employeeId)
-    const coverage1Employee = employees.find((e) => e.id === entry.coverageEmployeeId)
-    const coverage2Employee = employees.find((e) => e.id === entry.coverage2EmployeeId)
-
-    const date = new Date(entry.date)
-    const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
+    const coverage1 = employees.find((e) => e.id === entry.coverageEmployeeId)
+    const coverage2 = employees.find((e) => e.id === entry.coverage2EmployeeId)
 
     return [
-      formattedDate,
+      new Date(entry.date).toLocaleDateString(),
       employee?.name || "Unknown",
-      employee?.department || "Unknown",
+      employee?.department || "-",
       formatTime(entry.shiftStart),
       formatTime(entry.shiftEnd),
       formatTime(entry.break1Start),
       formatTime(entry.break1End),
-      coverage1Employee?.name || "",
+      coverage1?.name || "-",
       formatTime(entry.break2Start),
       formatTime(entry.break2End),
-      coverage2Employee?.name || "",
-      formatTime(entry.outsideTherapyStart),
-      formatTime(entry.outsideTherapyEnd),
-      entry.outsideTherapyReason || "",
+      coverage2?.name || "-",
       calculateTotalHours(entry),
     ]
   })
 
-  const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n")
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-  const link = document.createElement("a")
-  const url = URL.createObjectURL(blob)
-
-  link.setAttribute("href", url)
-  link.setAttribute("download", `${filename}.csv`)
-  link.style.visibility = "hidden"
-
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-export function formatOutsideTherapyTime(start?: string, end?: string, reason?: string): string {
-  if (!start || !end) return ""
-
-  const formattedTime = `${formatTime(start)} - ${formatTime(end)}`
-  return reason ? `${formattedTime} (${reason})` : formattedTime
+  const csv = [headers, ...rows].map((row) => row.join(",")).join("\n")
+  const blob = new Blob([csv], { type: "text/csv" })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${filename}.csv`
+  a.click()
+  window.URL.revokeObjectURL(url)
 }

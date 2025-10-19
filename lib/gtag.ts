@@ -66,32 +66,31 @@ export function grantAnalyticsConsent(): void {
   window.gtag("consent", "update", { analytics_storage: "granted" })
 }
 
-export const pageview = (url: string): void => {
-  if (!isAnalyticsEnabled()) return
-  ensureGtag()
-
-  window.gtag("config", GA_TRACKING_ID, { page_path: url })
+// https://developers.google.com/analytics/devguides/collection/gtagjs/pages
+export const pageview = (url: string) => {
+  if (typeof window !== "undefined" && (window as any).gtag) {
+    ;(window as any).gtag("config", GA_TRACKING_ID, {
+      page_path: url,
+    })
+  }
 }
 
-export const event = ({
-  action,
-  category,
-  label,
-  value,
-}: {
+type GTagEvent = {
   action: string
   category: string
-  label?: string
-  value?: number
-}): void => {
-  if (!isAnalyticsEnabled()) return
-  ensureGtag()
+  label: string
+  value: number
+}
 
-  window.gtag("event", action, {
-    event_category: category,
-    event_label: label,
-    value,
-  })
+// https://developers.google.com/analytics/devguides/collection/gtagjs/events
+export const event = ({ action, category, label, value }: GTagEvent) => {
+  if (typeof window !== "undefined" && (window as any).gtag) {
+    ;(window as any).gtag("event", action, {
+      event_category: category,
+      event_label: label,
+      value: value,
+    })
+  }
 }
 
 export const trackEmployeeAction = (action: "add" | "edit" | "delete" | "import", count?: number): void =>
@@ -99,7 +98,7 @@ export const trackEmployeeAction = (action: "add" | "edit" | "delete" | "import"
     action: `employee_${action}`,
     category: "Employee Management",
     label: count ? `count_${count}` : undefined,
-    value: count,
+    value: count as any,
   })
 
 export const trackBreakAction = (action: "schedule" | "modify" | "cancel" | "assign_coverage"): void =>
@@ -149,7 +148,7 @@ export const trackSearch = (searchType: string, resultsCount?: number): void =>
     action: "search",
     category: "Search & Filter",
     label: searchType,
-    value: resultsCount,
+    value: resultsCount as any,
   })
 
 export const trackError = (message: string, context?: string, fatal = false): void => {
