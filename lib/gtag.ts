@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * Google Analytics helper for the Employee Break Protocol App
  * -----------------------------------------------------------
@@ -7,8 +9,7 @@
  */
 
 declare global {
-  // Let TypeScript know these globals will exist in the browser
-  // eslint-disable-next-line no-var, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line no-var
   var dataLayer: any[] | undefined
   // eslint-disable-next-line @typescript-eslint/ban-types
   var gtag: Function | undefined
@@ -37,8 +38,8 @@ export function ensureGtag(): void {
 /*  🔐  CONSENT & ENABLEMENT                                          */
 /* ------------------------------------------------------------------ */
 export const isAnalyticsEnabled = (): boolean => {
-  if (!GA_TRACKING_ID) return false // GA not configured
-  if (typeof window === "undefined") return false // SSR safety
+  if (!GA_TRACKING_ID) return false
+  if (typeof window === "undefined") return false
 
   const consent = localStorage.getItem("analytics-consent")
   return consent === "accepted"
@@ -52,7 +53,6 @@ export function initGA(): void {
 
   if (!GA_TRACKING_ID || typeof window === "undefined") return
 
-  // Default all storage to denied (GDPR style) until user opts-in
   window.gtag("consent", "default", {
     analytics_storage: "denied",
     ad_storage: "denied",
@@ -60,16 +60,14 @@ export function initGA(): void {
     ad_personalization: "denied",
   })
 
-  // Configure GA with strict privacy options
   window.gtag("config", GA_TRACKING_ID, {
     anonymize_ip: true,
     allow_google_signals: false,
     allow_ad_personalization_signals: false,
-    send_page_view: false, // we'll send manually
+    send_page_view: false,
     cookie_flags: "SameSite=Strict;Secure",
   })
 
-  // If the user has previously accepted, grant the consent immediately
   if (isAnalyticsEnabled()) {
     grantAnalyticsConsent()
   }
@@ -96,9 +94,6 @@ export const pageview = (url: string): void => {
   window.gtag("config", GA_TRACKING_ID, { page_path: url })
 }
 
-// ──────────────────────────────────────────────────────────
-//  📊  GENERIC EVENT TRACKING
-// ──────────────────────────────────────────────────────────
 export const event = ({
   action,
   category,
@@ -124,7 +119,6 @@ export const event = ({
 /*  🔧  DOMAIN-SPECIFIC HELPERS                                       */
 /* ------------------------------------------------------------------ */
 
-// Employee management actions
 export const trackEmployeeAction = (action: "add" | "edit" | "delete" | "import", count?: number): void =>
   event({
     action: `employee_${action}`,
@@ -133,14 +127,12 @@ export const trackEmployeeAction = (action: "add" | "edit" | "delete" | "import"
     value: count,
   })
 
-// Break scheduling actions
 export const trackBreakAction = (action: "schedule" | "modify" | "cancel" | "assign_coverage"): void =>
   event({
     action: `break_${action}`,
     category: "Break Management",
   })
 
-// Data-management actions
 export const trackDataAction = (action: "export" | "backup" | "restore" | "import", format?: string): void =>
   event({
     action: `data_${action}`,
@@ -148,14 +140,12 @@ export const trackDataAction = (action: "export" | "backup" | "restore" | "impor
     label: format,
   })
 
-// Sharing / collaboration actions
 export const trackSharingAction = (action: "email_sent" | "link_created" | "access_granted" | "shared_view"): void =>
   event({
     action,
     category: "Sharing & Collaboration",
   })
 
-// UI interaction actions
 export const trackUIAction = (action: string, component: string): void =>
   event({
     action,
@@ -163,7 +153,6 @@ export const trackUIAction = (action: string, component: string): void =>
     label: component,
   })
 
-// Performance / timing metrics
 export const trackTiming = (name: string, value: number, category = "Performance"): void =>
   event({
     action: "timing_complete",
@@ -172,16 +161,14 @@ export const trackTiming = (name: string, value: number, category = "Performance
     value: Math.round(value),
   })
 
-// Feature-usage / engagement metrics
 export const trackEngagement = (feature: string, durationMs?: number): void =>
   event({
     action: "user_engagement",
     category: "Feature Usage",
     label: feature,
-    value: durationMs ? Math.round(durationMs / 1000) : undefined, // value in seconds
+    value: durationMs ? Math.round(durationMs / 1000) : undefined,
   })
 
-// Search & filter actions
 export const trackSearch = (searchType: string, resultsCount?: number): void =>
   event({
     action: "search",

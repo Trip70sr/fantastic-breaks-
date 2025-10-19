@@ -2,13 +2,13 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# copy package files then install all dependencies (dev + prod) for build
+# Copy package files
 COPY package*.json pnpm-lock.yaml* ./
 
-# Use full install for build step
+# Install ALL dependencies (including devDependencies) needed for build
 RUN npm ci
 
-# copy app source
+# Copy app source
 COPY . .
 
 # Build the Next app (will produce /app/out because next.config.mjs uses output: 'export')

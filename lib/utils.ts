@@ -103,6 +103,8 @@ export function formatShiftHours(hours: number): string {
 }
 
 export function exportToCSV(breakEntries: BreakEntry[], employees: Employee[], filename: string) {
+  if (typeof window === "undefined") return
+
   const headers = [
     "Date",
     "Employee",
