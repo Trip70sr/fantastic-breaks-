@@ -1,6 +1,5 @@
 # Multi-stage build for production (fixed)
 FROM node:18-alpine AS builder
-
 WORKDIR /app
 
 # copy package files then install all dependencies (dev + prod) for build
