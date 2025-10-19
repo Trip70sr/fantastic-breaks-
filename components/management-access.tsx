@@ -1,86 +1,37 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { BarChart3, TrendingUp, Users, AlertCircle, Bell, Settings, Shield } from "lucide-react"
+import type { BreakRecord, Employee } from "@/lib/types"
+import { DynamicChartContainer, DynamicChartTooltip, DynamicChartTooltipContent } from "@/components/dynamic-chart"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { calculateShiftHours } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Shield, TrendingUp, Clock, Users, AlertTriangle, CheckCircle, Bell, BellOff, Settings } from "lucide-react"
-import type { Employee, BreakEntry, Department } from "@/lib/types"
-import { calculateShiftHours, formatShiftHours } from "@/lib/utils"
 
 interface ManagementAccessProps {
+  breaks: BreakRecord[]
   employees: Employee[]
-  breakEntries: BreakEntry[]
-  selectedDate: Date
-  onFilterChange?: (filters: ManagementFilters) => void
 }
 
-interface ManagementFilters {
-  showAllDepartments: boolean
-  showMissingBreaks: boolean
-  showCoverageIssues: boolean
-  showOvertimeAlerts: boolean
-}
-
-interface DetailedStats {
-  totalEmployees: number
-  missingBreaks: number
-  coverageIssues: number
-  overtimeAlerts: number
-  departmentBreakdown: { [key in Department]: number }
-  totalShiftHours: number
-  averageShiftLength: number
-  breakComplianceRate: number
-  coverageComplianceRate: number
-  longestShift: number
-  shortestShift: number
-  employeesWithFullBreaks: number
-  employeesWithPartialBreaks: number
-  employeesWithNoBreaks: number
-  totalBreaksScheduled: number
-  totalCoverageAssigned: number
-}
-
-interface NotificationThresholds {
-  breakCompliance: number
-  coverageCompliance: number
-  overtimeLimit: number
-  missingBreaksLimit: number
-}
-
-interface Notification {
-  id: string
-  type: "warning" | "error" | "info"
-  title: string
-  message: string
-  timestamp: Date
-  acknowledged: boolean
-}
-
-export default function ManagementAccess({
-  employees,
-  breakEntries,
-  selectedDate,
-  onFilterChange,
-}: ManagementAccessProps) {
-  const [managementFilters, setManagementFilters] = useState<ManagementFilters>({
+export default function ManagementAccess({ breaks, employees }: ManagementAccessProps) {
+  const [activeTab, setActiveTab] = useState("overview")
+  const [managementFilters, setManagementFilters] = useState({
     showAllDepartments: false,
     showMissingBreaks: false,
     showCoverageIssues: false,
     showOvertimeAlerts: false,
   })
 
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifications, setNotifications] = useState([])
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [showThresholdDialog, setShowThresholdDialog] = useState(false)
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false)
 
-  const [thresholds, setThresholds] = useState<NotificationThresholds>({
+  const [thresholds, setThresholds] = useState({
     breakCompliance: 85,
     coverageCompliance: 90,
     overtimeLimit: 3,
@@ -110,28 +61,59 @@ export default function ManagementAccess({
     localStorage.setItem("notificationsEnabled", JSON.stringify(notificationsEnabled))
   }, [notificationsEnabled])
 
-  const handleFilterChange = (filterKey: keyof ManagementFilters, value: boolean) => {
+  const handleFilterChange = (filterKey, value) => {
     const newFilters = { ...managementFilters, [filterKey]: value }
     setManagementFilters(newFilters)
-    onFilterChange?.(newFilters)
   }
 
+  // Calculate statistics
+  const totalBreaks = breaks.length
+  const activeEmployees = employees.filter((emp) => emp.status === "active").length
+  const todayBreaks = breaks.filter((b) => {
+    const today = new Date().toDateString()
+    return new Date(b.date).toDateString() === today
+  }).length
+
+  // Calculate compliance rate
+  const scheduledBreaks = breaks.filter((b) => b.status === "scheduled" || b.status === "completed").length
+  const complianceRate = totalBreaks > 0 ? Math.round((scheduledBreaks / totalBreaks) * 100) : 0
+
+  // Prepare chart data - breaks by day of week
+  const breaksByDay = breaks.reduce(
+    (acc, b) => {
+      const day = new Date(b.date).toLocaleDateString("en-US", { weekday: "short" })
+      acc[day] = (acc[day] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
+
+  const chartData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => ({
+    day,
+    breaks: breaksByDay[day] || 0,
+  }))
+
+  const chartConfig = {
+    breaks: {
+      label: "Breaks",
+      color: "hsl(var(--chart-1))",
+    },
+  }
+
+  // Find employees with coverage issues
+  const coverageIssues = breaks.filter((b) => !b.coverage && b.status === "scheduled").length
+
   // Calculate detailed management statistics
-  const getDetailedStats = (): DetailedStats => {
-    const dateString = selectedDate.toISOString().split("T")[0]
-    const todayEntries = breakEntries.filter((entry) => new Date(entry.date).toISOString().split("T")[0] === dateString)
+  const getDetailedStats = () => {
+    const todayEntries = breaks.filter((entry) => new Date(entry.date).toDateString() === new Date().toDateString())
 
     // Basic counts
     const totalEmployees = todayEntries.length
-    const missingBreaks = todayEntries.filter((entry) => !entry.break1Start || !entry.break1End).length
-    const coverageIssues = todayEntries.filter(
-      (entry) =>
-        (entry.break1Start && entry.break1End && (!entry.coverageEmployeeId || entry.coverageEmployeeId === "none")) ||
-        (entry.break2Start && entry.break2End && (!entry.coverage2EmployeeId || entry.coverage2EmployeeId === "none")),
-    ).length
+    const missingBreaks = todayEntries.filter((entry) => !entry.startTime || !entry.endTime).length
+    const coverageIssues = todayEntries.filter((entry) => !entry.coverage && entry.status === "scheduled").length
 
     // Department breakdown
-    const departmentBreakdown: { [key in Department]: number } = {
+    const departmentBreakdown = {
       RBT: 0,
       Operations: 0,
       BCBA: 0,
@@ -146,7 +128,7 @@ export default function ManagementAccess({
     })
 
     // Shift analysis
-    const shiftHours = todayEntries.map((entry) => calculateShiftHours(entry.shiftStart, entry.shiftEnd))
+    const shiftHours = todayEntries.map((entry) => calculateShiftHours(entry.startTime, entry.endTime))
     const totalShiftHours = shiftHours.reduce((sum, hours) => sum + hours, 0)
     const averageShiftLength = totalEmployees > 0 ? totalShiftHours / totalEmployees : 0
     const longestShift = shiftHours.length > 0 ? Math.max(...shiftHours) : 0
@@ -155,34 +137,27 @@ export default function ManagementAccess({
 
     // Break analysis
     let employeesWithFullBreaks = 0
-    let employeesWithPartialBreaks = 0
+    const employeesWithPartialBreaks = 0
     let employeesWithNoBreaks = 0
     let totalBreaksScheduled = 0
     let totalCoverageAssigned = 0
 
     todayEntries.forEach((entry) => {
-      const shiftLength = calculateShiftHours(entry.shiftStart, entry.shiftEnd)
-      const hasBreak1 = entry.break1Start && entry.break1End
-      const hasBreak2 = entry.break2Start && entry.break2End
-      const isEligibleForBreak2 = shiftLength >= 6.5
+      const shiftLength = calculateShiftHours(entry.startTime, entry.endTime)
+      const hasBreak = entry.startTime && entry.endTime
 
-      if (hasBreak1) totalBreaksScheduled++
-      if (hasBreak2) totalBreaksScheduled++
+      if (hasBreak) totalBreaksScheduled++
 
-      if (entry.coverageEmployeeId && entry.coverageEmployeeId !== "none") totalCoverageAssigned++
-      if (entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none") totalCoverageAssigned++
+      if (entry.coverage) totalCoverageAssigned++
 
-      if (!hasBreak1) {
+      if (!hasBreak) {
         employeesWithNoBreaks++
-      } else if (isEligibleForBreak2 && !hasBreak2) {
-        employeesWithPartialBreaks++
       } else {
         employeesWithFullBreaks++
       }
     })
 
-    const breakComplianceRate =
-      totalEmployees > 0 ? ((employeesWithFullBreaks + employeesWithPartialBreaks) / totalEmployees) * 100 : 0
+    const breakComplianceRate = totalEmployees > 0 ? (employeesWithFullBreaks / totalEmployees) * 100 : 0
     const coverageComplianceRate = totalBreaksScheduled > 0 ? (totalCoverageAssigned / totalBreaksScheduled) * 100 : 0
 
     return {
@@ -211,7 +186,7 @@ export default function ManagementAccess({
   useEffect(() => {
     if (!notificationsEnabled) return
 
-    const newNotifications: Notification[] = []
+    const newNotifications = []
     const now = new Date()
 
     // Break compliance threshold
@@ -271,7 +246,7 @@ export default function ManagementAccess({
     }
   }, [stats, thresholds, notificationsEnabled])
 
-  const acknowledgeNotification = (id: string) => {
+  const acknowledgeNotification = (id) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, acknowledged: true } : n)))
   }
 
@@ -279,13 +254,13 @@ export default function ManagementAccess({
     setNotifications([])
   }
 
-  const getComplianceColor = (rate: number) => {
+  const getComplianceColor = (rate) => {
     if (rate >= 90) return "text-green-600"
     if (rate >= 70) return "text-yellow-600"
     return "text-red-600"
   }
 
-  const getComplianceBadge = (rate: number) => {
+  const getComplianceBadge = (rate) => {
     if (rate >= 90) return <Badge className="bg-green-100 text-green-800">Excellent</Badge>
     if (rate >= 70) return <Badge className="bg-yellow-100 text-yellow-800">Good</Badge>
     return <Badge className="bg-red-100 text-red-800">Needs Attention</Badge>
@@ -294,448 +269,318 @@ export default function ManagementAccess({
   const unacknowledgedNotifications = notifications.filter((n) => !n.acknowledged)
 
   return (
-    <Card className="lg:col-span-1">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Management Controls
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setShowNotificationsDialog(true)} className="relative">
-              <Bell className="h-4 w-4" />
-              {unacknowledgedNotifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {unacknowledgedNotifications.length}
-                </span>
-              )}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowThresholdDialog(true)}>
-              <Settings className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Active Notifications */}
-        {unacknowledgedNotifications.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-1 text-red-600">
-              <Bell className="h-4 w-4" />
-              Active Alerts ({unacknowledgedNotifications.length})
-            </Label>
-            <div className="space-y-1 max-h-32 overflow-y-auto">
-              {unacknowledgedNotifications.slice(0, 3).map((notification) => (
-                <Alert
-                  key={notification.id}
-                  className={`p-2 ${
-                    notification.type === "error" ? "border-red-200 bg-red-50" : "border-yellow-200 bg-yellow-50"
-                  }`}
-                >
-                  <AlertTriangle className="h-3 w-3" />
-                  <AlertDescription className="text-xs">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">{notification.title}</div>
-                        <div className="text-gray-600">{notification.message}</div>
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Breaks</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalBreaks}</div>
+            <p className="text-xs text-muted-foreground">{todayBreaks} scheduled today</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeEmployees}</div>
+            <p className="text-xs text-muted-foreground">out of {employees.length} total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{complianceRate}%</div>
+            <p className="text-xs text-muted-foreground">
+              {scheduledBreaks} of {totalBreaks} breaks scheduled
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Coverage Issues</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{coverageIssues}</div>
+            <p className="text-xs text-muted-foreground">breaks need coverage</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="alerts">Alerts</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Break Distribution</CardTitle>
+              <CardDescription>Breaks scheduled by day of the week</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DynamicChartContainer config={chartConfig} className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="day" tickLine={false} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} />
+                    <DynamicChartTooltip content={<DynamicChartTooltipContent />} />
+                    <Bar dataKey="breaks" fill="var(--color-breaks)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </DynamicChartContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee Break Patterns</CardTitle>
+              <CardDescription>Analysis of break scheduling trends</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-4">
+                  {employees.slice(0, 10).map((employee) => {
+                    const empBreaks = breaks.filter((b) => b.employeeId === employee.id)
+                    return (
+                      <div key={employee.id} className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{employee.name}</p>
+                          <p className="text-sm text-muted-foreground">{employee.department}</p>
+                        </div>
+                        <Badge variant={empBreaks.length > 0 ? "default" : "secondary"}>
+                          {empBreaks.length} breaks
+                        </Badge>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => acknowledgeNotification(notification.id)}
-                        className="h-6 w-6 p-0"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              ))}
-              {unacknowledgedNotifications.length > 3 && (
-                <div className="text-xs text-gray-500 text-center">
-                  +{unacknowledgedNotifications.length - 3} more alerts
+                    )
+                  })}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Quick Overview */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            Quick Overview
-          </Label>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-blue-50 p-2 rounded">
-              <div className="font-medium">{stats.totalEmployees}</div>
-              <div className="text-gray-600">Working Today</div>
-            </div>
-            <div
-              className={`p-2 rounded ${stats.missingBreaks > thresholds.missingBreaksLimit ? "bg-red-100" : "bg-red-50"}`}
-            >
-              <div className="font-medium">{stats.missingBreaks}</div>
-              <div className="text-gray-600">Missing Breaks</div>
-            </div>
-            <div className="bg-yellow-50 p-2 rounded">
-              <div className="font-medium">{stats.coverageIssues}</div>
-              <div className="text-gray-600">Coverage Issues</div>
-            </div>
-            <div
-              className={`p-2 rounded ${stats.overtimeAlerts > thresholds.overtimeLimit ? "bg-orange-100" : "bg-orange-50"}`}
-            >
-              <div className="font-medium">{stats.overtimeAlerts}</div>
-              <div className="text-gray-600">Overtime</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Department Breakdown */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Department Breakdown</Label>
-          <div className="space-y-1">
-            {Object.entries(stats.departmentBreakdown).map(([dept, count]) => (
-              <div key={dept} className="flex items-center justify-between text-xs">
-                <span className="font-medium">{dept}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                    <div
-                      className="bg-primary h-1.5 rounded-full"
-                      style={{
-                        width: stats.totalEmployees > 0 ? `${(count / stats.totalEmployees) * 100}%` : "0%",
-                      }}
-                    />
-                  </div>
-                  <span className="w-6 text-right">{count}</span>
+        <TabsContent value="alerts" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Coverage Alerts</CardTitle>
+              <CardDescription>Breaks that need coverage assignment</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-4">
+                  {breaks
+                    .filter((b) => !b.coverage && b.status === "scheduled")
+                    .slice(0, 10)
+                    .map((breakRecord) => {
+                      const employee = employees.find((e) => e.id === breakRecord.employeeId)
+                      return (
+                        <div key={breakRecord.id} className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="flex items-center gap-3">
+                            <AlertCircle className="h-5 w-5 text-yellow-500" />
+                            <div>
+                              <p className="font-medium">{employee?.name || "Unknown"}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(breakRecord.date).toLocaleDateString()} at {breakRecord.startTime}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="outline">No Coverage</Badge>
+                        </div>
+                      )
+                    })}
+                  {breaks.filter((b) => !b.coverage && b.status === "scheduled").length === 0 && (
+                    <p className="text-center text-sm text-muted-foreground">All breaks have coverage assigned</p>
+                  )}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Shift Analytics */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            Shift Analytics
-          </Label>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span>Total Hours:</span>
-              <span className="font-medium">{formatShiftHours(stats.totalShiftHours)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Average Shift:</span>
-              <span className="font-medium">{formatShiftHours(stats.averageShiftLength)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Longest Shift:</span>
-              <span className="font-medium">{formatShiftHours(stats.longestShift)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Shortest Shift:</span>
-              <span className="font-medium">{formatShiftHours(stats.shortestShift)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Break Compliance */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-1">
-            <CheckCircle className="h-4 w-4" />
-            Break Compliance
-          </Label>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs">Overall Rate:</span>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-medium ${getComplianceColor(stats.breakComplianceRate)}`}>
-                  {stats.breakComplianceRate.toFixed(1)}%
-                </span>
-                {getComplianceBadge(stats.breakComplianceRate)}
-              </div>
-            </div>
-            <Progress
-              value={stats.breakComplianceRate}
-              className={`h-2 ${stats.breakComplianceRate < thresholds.breakCompliance ? "bg-red-100" : ""}`}
-            />
-            <div className="grid grid-cols-3 gap-1 text-xs">
-              <div className="text-center">
-                <div className="font-medium text-green-600">{stats.employeesWithFullBreaks}</div>
-                <div className="text-gray-500">Full</div>
-              </div>
-              <div className="text-center">
-                <div className="font-medium text-yellow-600">{stats.employeesWithPartialBreaks}</div>
-                <div className="text-gray-500">Partial</div>
-              </div>
-              <div className="text-center">
-                <div className="font-medium text-red-600">{stats.employeesWithNoBreaks}</div>
-                <div className="text-gray-500">None</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Coverage Analytics */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-1">
-            <TrendingUp className="h-4 w-4" />
-            Coverage Analytics
-          </Label>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs">Coverage Rate:</span>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-medium ${getComplianceColor(stats.coverageComplianceRate)}`}>
-                  {stats.coverageComplianceRate.toFixed(1)}%
-                </span>
-                {getComplianceBadge(stats.coverageComplianceRate)}
-              </div>
-            </div>
-            <Progress
-              value={stats.coverageComplianceRate}
-              className={`h-2 ${stats.coverageComplianceRate < thresholds.coverageCompliance ? "bg-red-100" : ""}`}
-            />
-            <div className="flex justify-between text-xs">
-              <span>Breaks Scheduled:</span>
-              <span className="font-medium">{stats.totalBreaksScheduled}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span>Coverage Assigned:</span>
-              <span className="font-medium">{stats.totalCoverageAssigned}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Alerts & Issues */}
-        {(stats.missingBreaks > 0 || stats.coverageIssues > 0 || stats.overtimeAlerts > 0) && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-1">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-              Attention Required
-            </Label>
-            <div className="space-y-1">
-              {stats.missingBreaks > 0 && (
-                <div
-                  className={`flex items-center justify-between text-xs p-2 rounded ${
-                    stats.missingBreaks > thresholds.missingBreaksLimit ? "bg-red-100" : "bg-red-50"
-                  }`}
-                >
-                  <span>Employees without breaks</span>
-                  <Badge variant="destructive">{stats.missingBreaks}</Badge>
-                </div>
-              )}
-              {stats.coverageIssues > 0 && (
-                <div className="flex items-center justify-between text-xs bg-yellow-50 p-2 rounded">
-                  <span>Breaks without coverage</span>
-                  <Badge className="bg-yellow-100 text-yellow-800">{stats.coverageIssues}</Badge>
-                </div>
-              )}
-              {stats.overtimeAlerts > 0 && (
-                <div
-                  className={`flex items-center justify-between text-xs p-2 rounded ${
-                    stats.overtimeAlerts > thresholds.overtimeLimit ? "bg-orange-100" : "bg-orange-50"
-                  }`}
-                >
-                  <span>Overtime shifts (8+ hours)</span>
-                  <Badge className="bg-orange-100 text-orange-800">{stats.overtimeAlerts}</Badge>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Advanced Filters */}
-        <div className="space-y-3 border-t pt-4">
-          <Label className="text-sm font-medium">Advanced Filters</Label>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="show-all-depts" className="text-xs">
-                Show All Departments
-              </Label>
-              <input
-                id="show-all-depts"
-                type="checkbox"
-                checked={managementFilters.showAllDepartments}
-                onChange={(e) => handleFilterChange("showAllDepartments", e.target.checked)}
-                className="rounded border-gray-300"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="missing-breaks" className="text-xs">
-                Highlight Missing Breaks
-              </Label>
-              <input
-                id="missing-breaks"
-                type="checkbox"
-                checked={managementFilters.showMissingBreaks}
-                onChange={(e) => handleFilterChange("showMissingBreaks", e.target.checked)}
-                className="rounded border-gray-300"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="coverage-issues" className="text-xs">
-                Show Coverage Issues
-              </Label>
-              <input
-                id="coverage-issues"
-                type="checkbox"
-                checked={managementFilters.showCoverageIssues}
-                onChange={(e) => handleFilterChange("showCoverageIssues", e.target.checked)}
-                className="rounded border-gray-300"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="overtime-alerts" className="text-xs">
-                Overtime Alerts
-              </Label>
-              <input
-                id="overtime-alerts"
-                type="checkbox"
-                checked={managementFilters.showOvertimeAlerts}
-                onChange={(e) => handleFilterChange("showOvertimeAlerts", e.target.checked)}
-                className="rounded border-gray-300"
-              />
-            </div>
-          </div>
-        </div>
-      </CardContent>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Notification Settings Dialog */}
-      <Dialog open={showThresholdDialog} onOpenChange={setShowThresholdDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Notification Settings
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Enable Notifications</Label>
-              <Button variant="ghost" size="sm" onClick={() => setNotificationsEnabled(!notificationsEnabled)}>
-                {notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+      <Card className="lg:col-span-1">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Management Controls
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setShowNotificationsDialog(true)} className="relative">
+                <Bell className="h-4 w-4" />
+                {unacknowledgedNotifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unacknowledgedNotifications.length}
+                  </span>
+                )}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowThresholdDialog(true)}>
+                <Settings className="h-4 w-4" />
               </Button>
             </div>
-
-            {notificationsEnabled && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="break-threshold">Break Compliance Threshold (%)</Label>
-                  <Input
-                    id="break-threshold"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={thresholds.breakCompliance}
-                    onChange={(e) => setThresholds((prev) => ({ ...prev, breakCompliance: Number(e.target.value) }))}
-                  />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Active Notifications */}
+          {unacknowledgedNotifications.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" />
+                  Active Alerts ({unacknowledgedNotifications.length})
                 </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowNotificationsDialog(true)}>
+                  View
+                </Button>
+              </div>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {unacknowledgedNotifications.slice(0, 3).map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`flex items-center justify-between rounded-lg border p-3 ${
+                      notification.type === "error" ? "border-red-200 bg-red-50" : "border-yellow-200 bg-yellow-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-5 w-5 text-yellow-500" />
+                      <div>
+                        <p className="font-medium">{notification.title}</p>
+                        <p className="text-sm text-muted-foreground">{notification.message}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => acknowledgeNotification(notification.id)}>
+                      ×
+                    </Button>
+                  </div>
+                ))}
+                {unacknowledgedNotifications.length > 3 && (
+                  <div className="text-center py-8 text-gray-500">
+                    +{unacknowledgedNotifications.length - 3} more alerts
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="coverage-threshold">Coverage Compliance Threshold (%)</Label>
-                  <Input
-                    id="coverage-threshold"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={thresholds.coverageCompliance}
-                    onChange={(e) => setThresholds((prev) => ({ ...prev, coverageCompliance: Number(e.target.value) }))}
-                  />
-                </div>
+          {/* Advanced Filters */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Advanced Filters</div>
+              <Button variant="ghost" size="sm" onClick={() => setShowThresholdDialog(true)}>
+                Settings
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Show All Departments</div>
+                <input
+                  type="checkbox"
+                  checked={managementFilters.showAllDepartments}
+                  onChange={(e) => handleFilterChange("showAllDepartments", e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="overtime-threshold">Overtime Limit (employees)</Label>
-                  <Input
-                    id="overtime-threshold"
-                    type="number"
-                    min="0"
-                    value={thresholds.overtimeLimit}
-                    onChange={(e) => setThresholds((prev) => ({ ...prev, overtimeLimit: Number(e.target.value) }))}
-                  />
-                </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Highlight Missing Breaks</div>
+                <input
+                  type="checkbox"
+                  checked={managementFilters.showMissingBreaks}
+                  onChange={(e) => handleFilterChange("showMissingBreaks", e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="missing-breaks-threshold">Missing Breaks Limit (employees)</Label>
-                  <Input
-                    id="missing-breaks-threshold"
-                    type="number"
-                    min="0"
-                    value={thresholds.missingBreaksLimit}
-                    onChange={(e) => setThresholds((prev) => ({ ...prev, missingBreaksLimit: Number(e.target.value) }))}
-                  />
-                </div>
-              </>
-            )}
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Show Coverage Issues</div>
+                <input
+                  type="checkbox"
+                  checked={managementFilters.showCoverageIssues}
+                  onChange={(e) => handleFilterChange("showCoverageIssues", e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Overtime Alerts</div>
+                <input
+                  type="checkbox"
+                  checked={managementFilters.showOvertimeAlerts}
+                  onChange={(e) => handleFilterChange("showOvertimeAlerts", e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+              </div>
+            </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setShowThresholdDialog(false)}>Save Settings</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
 
       {/* Notifications History Dialog */}
-      <Dialog open={showNotificationsDialog} onOpenChange={setShowNotificationsDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notifications ({notifications.length})
-              </div>
-              {notifications.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearAllNotifications}>
-                  Clear All
-                </Button>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No notifications</p>
-              </div>
-            ) : (
-              notifications.map((notification) => (
-                <Alert
+      <Card className="lg:col-span-1">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications ({notifications.length})
+            </div>
+            {notifications.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearAllNotifications}>
+                Clear All
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {notifications.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No notifications</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {notifications.map((notification) => (
+                <div
                   key={notification.id}
-                  className={`${notification.acknowledged ? "opacity-60" : ""} ${
+                  className={`flex items-center justify-between rounded-lg border p-3 ${
                     notification.type === "error" ? "border-red-200 bg-red-50" : "border-yellow-200 bg-yellow-50"
                   }`}
                 >
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{notification.title}</div>
-                        <div className="text-xs text-gray-600 mt-1">{notification.message}</div>
-                        <div className="text-xs text-gray-400 mt-1">{notification.timestamp.toLocaleTimeString()}</div>
-                      </div>
-                      {!notification.acknowledged && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => acknowledgeNotification(notification.id)}
-                          className="h-6 w-6 p-0 ml-2"
-                        >
-                          ×
-                        </Button>
-                      )}
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5 text-yellow-500" />
+                    <div>
+                      <p className="font-medium">{notification.title}</p>
+                      <p className="text-sm text-muted-foreground">{notification.message}</p>
                     </div>
-                  </AlertDescription>
-                </Alert>
-              ))
-            )}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setShowNotificationsDialog(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
+                  </div>
+                  {!notification.acknowledged && (
+                    <Button variant="ghost" size="sm" onClick={() => acknowledgeNotification(notification.id)}>
+                      ×
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
