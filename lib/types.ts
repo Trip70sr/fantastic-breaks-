@@ -1,9 +1,7 @@
-export type Department = "RBT" | "Operations" | "BCBA" | "Floater"
-
 export interface Employee {
   id: string
   name: string
-  department: Department
+  department: string
 }
 
 export interface BreakEntry {
@@ -23,25 +21,14 @@ export interface BreakEntry {
   outsideTherapyReason?: string
 }
 
-export interface NotificationSettings {
-  directorEmail: string
-  breakDurationThreshold: number
-  enableBreakDurationAlerts: boolean
-  enableRealTimeAlerts: boolean
-  alertCooldownMinutes: number
-}
-
-export interface BreakAlert {
+export interface BreakRecord {
   id: string
   employeeId: string
   employeeName: string
-  breakType: "break1" | "break2"
-  breakStart: string
-  breakEnd: string
-  duration: number
-  threshold: number
   date: string
-  timestamp: Date
-  emailSent: boolean
-  acknowledged: boolean
+  clockIn: string
+  clockOut: string
+  breakStart?: string
+  breakEnd?: string
+  breakDuration: number
 }
