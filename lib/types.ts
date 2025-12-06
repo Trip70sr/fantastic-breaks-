@@ -18,3 +18,34 @@ export interface BreakEntry {
   break2End?: string
   coverage2EmployeeId?: string
 }
+
+export interface AdminCredentials {
+  username: string
+  passwordHash: string
+  role: "super_admin" | "admin"
+  createdAt: string
+  lastLogin?: string
+}
+
+export interface BreakViolation {
+  id: string
+  employeeId: string
+  date: string
+  violationType: "excessive_duration" | "unauthorized_break" | "insufficient_rest"
+  description: string
+  breakDuration: number // in minutes
+  expectedDuration: number // in minutes
+  shiftHours: number
+  revenueImpact: number // in dollars
+}
+
+export interface ComplianceSettings {
+  hourlyRate: number // average hourly rate for revenue calculation
+  violationThresholds: {
+    excessiveBreakMinutes: number // minutes over allowed break
+    dailyViolationCount: number // violations per day to trigger alert
+    monthlyViolationCount: number // violations per month to trigger alert
+  }
+  notificationEmails: string[]
+  notificationsEnabled: boolean
+}
