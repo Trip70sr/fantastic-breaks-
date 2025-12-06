@@ -190,3 +190,5 @@ function Users({ className }: { className?: string }) {
     </svg>
   )
 }
+
+export default EmailSharing
