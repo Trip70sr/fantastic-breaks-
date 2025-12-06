@@ -5,11 +5,49 @@ import type { Employee, BreakEntry } from "./types"
 const EMPLOYEES_KEY = "employees"
 const BREAK_ENTRIES_KEY = "breakEntries"
 
+export const initialEmployees: Employee[] = [
+  {
+    id: "1",
+    name: "Sarah Johnson",
+    department: "Customer Service",
+    shift: "Morning",
+    email: "sarah.j@company.com",
+  },
+  {
+    id: "2",
+    name: "Michael Chen",
+    department: "Sales",
+    shift: "Afternoon",
+    email: "michael.c@company.com",
+  },
+  {
+    id: "3",
+    name: "Emily Rodriguez",
+    department: "Customer Service",
+    shift: "Evening",
+    email: "emily.r@company.com",
+  },
+  {
+    id: "4",
+    name: "David Kim",
+    department: "Tech Support",
+    shift: "Morning",
+    email: "david.k@company.com",
+  },
+  {
+    id: "5",
+    name: "Jessica Taylor",
+    department: "Sales",
+    shift: "Afternoon",
+    email: "jessica.t@company.com",
+  },
+]
+
 // Employee functions
 export function loadEmployees(): Employee[] {
   if (typeof window === "undefined") return []
   const data = localStorage.getItem(EMPLOYEES_KEY)
-  return data ? JSON.parse(data) : []
+  return data ? JSON.parse(data) : initialEmployees
 }
 
 export function saveEmployees(employees: Employee[]): void {
