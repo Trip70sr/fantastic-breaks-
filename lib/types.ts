@@ -67,3 +67,15 @@ export interface BreakAssignment {
   assignedBy: string // admin/manager user
   assignedAt: string // ISO timestamp
 }
+
+export interface ShiftScheduleEntry {
+  id: string
+  employeeId: string
+  date: string // YYYY-MM-DD
+  startTime: string // HH:mm
+  endTime: string // HH:mm
+  therapyMinutes: number // excluded from work hours
+  netWorkMinutes: number // total minutes - therapy minutes
+  selfReported: boolean // true if employee entered their own schedule
+  reportedAt: string // ISO timestamp
+}

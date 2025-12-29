@@ -10,7 +10,7 @@ import BreakTimesheetTable from "@/components/break-timesheet-table"
 import EmployeeManagement from "@/components/employee-management"
 import DataBackupRestore from "@/components/data-backup-restore"
 import ManagementAccess from "@/components/management-access"
-import type { Employee, BreakEntry, Department } from "@/lib/types"
+import type { Employee, BreakEntry, Department, ShiftScheduleEntry } from "@/lib/types"
 import { initialEmployees } from "@/lib/data"
 import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -27,6 +27,7 @@ import AssignedBreakTimesheet from "@/components/assigned-break-timesheet"
 import { getAssignmentForDate, setAssignmentForDate } from "@/lib/break-assignments"
 import { getWorkingToday } from "@/lib/working-today"
 import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
+import { getShiftSchedules, saveShiftSchedule } from "@/lib/shift-storage"
 
 export default function EmployeeBreakDashboard() {
   const analytics = useAnalytics()
@@ -34,6 +35,7 @@ export default function EmployeeBreakDashboard() {
 
   const [employees, setEmployees] = useState<Employee[]>([])
   const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
+  const [shiftSchedules, setShiftSchedules] = useState<ShiftScheduleEntry[]>([])
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [filterEmployee, setFilterEmployee] = useState<string>("all")
   const [filterBreakStatus, setFilterBreakStatus] = useState<string>("all")
@@ -63,6 +65,8 @@ export default function EmployeeBreakDashboard() {
     if (savedBreakEntries) {
       setBreakEntries(JSON.parse(savedBreakEntries))
     }
+
+    setShiftSchedules(getShiftSchedules())
   }, [])
 
   // Save break entries to localStorage whenever they change
@@ -82,6 +86,14 @@ export default function EmployeeBreakDashboard() {
     const assignment = getAssignmentForDate(dateString)
     setAssignedEmployeeIds(assignment?.employeeIds || [])
   }, [selectedDate])
+
+  const handleSaveShiftSchedule = (schedule: ShiftScheduleEntry) => {
+    saveShiftSchedule(schedule)
+    setShiftSchedules(getShiftSchedules())
+
+    // Track analytics
+    analytics.trackBreak("Self-Reported Shift", `${schedule.netWorkMinutes / 60}h net work`)
+  }
 
   const handleExportCSV = () => {
     const formattedDate = format(selectedDate, "yyyy-MM-dd")
@@ -448,8 +460,10 @@ export default function EmployeeBreakDashboard() {
               employees={employees}
               assignedIds={assignedEmployeeIds}
               breakEntries={breakEntries}
+              shiftSchedules={shiftSchedules}
               date={selectedDate.toISOString().split("T")[0]}
               onStartBreak={handleQuickAddBreak}
+              onSaveShiftSchedule={handleSaveShiftSchedule}
             />
 
             <Tabs defaultValue="timesheet" className="w-full mt-6">
@@ -491,32 +505,37 @@ export default function EmployeeBreakDashboard() {
         </Card>
       </div>
 
-      <EmployeeManagement
-        isOpen={isEmployeeManagementOpen}
-        onClose={() => setIsEmployeeManagementOpen(false)}
-        employees={employees}
-        breakEntries={breakEntries}
-        onAddEmployee={handleAddEmployee}
-        onUpdateEmployee={handleUpdateEmployee}
-        onDeleteEmployee={handleDeleteEmployee}
-        onAddBreakEntry={handleAddBreakEntry}
-        onUpdateBreakEntry={handleUpdateBreakEntry}
-      />
+      {/* Updated modal rendering to ensure they are rendered conditionally */}
+      {isEmailSharingOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="max-w-2xl w-full">
+            <EmailSharing employees={employees} onClose={() => setIsEmailSharingOpen(false)} />
+          </div>
+        </div>
+      )}
 
-      <DataBackupRestore
-        isOpen={isBackupRestoreOpen}
-        onClose={() => setIsBackupRestoreOpen(false)}
-        employees={employees}
-        breakEntries={breakEntries}
-        onRestoreData={handleRestoreData}
-      />
+      {isEmployeeManagementOpen && (
+        <EmployeeManagement
+          employees={employees}
+          breakEntries={breakEntries}
+          selectedDate={selectedDate}
+          onAddEmployee={handleAddEmployee}
+          onUpdateEmployee={handleUpdateEmployee}
+          onDeleteEmployee={handleDeleteEmployee}
+          onAddBreakEntry={handleAddBreakEntry}
+          onUpdateBreakEntry={handleUpdateBreakEntry}
+          onClose={() => setIsEmployeeManagementOpen(false)}
+        />
+      )}
 
-      <EmailSharing
-        isOpen={isEmailSharingOpen}
-        onClose={() => setIsEmailSharingOpen(false)}
-        employees={employees}
-        breakEntries={breakEntries}
-      />
+      {isBackupRestoreOpen && (
+        <DataBackupRestore
+          employees={employees}
+          breakEntries={breakEntries}
+          onRestoreData={handleRestoreData}
+          onClose={() => setIsBackupRestoreOpen(false)}
+        />
+      )}
     </div>
   )
 }
