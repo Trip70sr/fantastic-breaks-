@@ -33,6 +33,7 @@ import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getVerificationForEmployee, saveShiftVerification } from "@/lib/shift-verification"
 import { Skeleton } from "@/components/ui/skeleton"
+import { checkBreakDuplicate, getNextBreakNumber } from "@/lib/break-validation"
 
 const EmailSharing = dynamic(() => import("@/components/email-sharing"), {
   loading: () => <div className="text-center py-8">Loading...</div>,
@@ -384,10 +385,48 @@ export default function EmployeeBreakDashboard() {
 
   // New handleSubmitBreakEntry from updates
   const handleSubmitBreakEntry = useCallback(() => {
+    console.log("[v0] Starting break entry submission")
+
     // Validation
     if (!selectedEmployee) {
       toast.error("Please select an employee")
       return
+    }
+
+    const hasBreakTimes = break1Start || break1End || break2Start || break2End || break3Start || break3End
+
+    if (hasBreakTimes) {
+      // Determine which break number is being entered
+      let breakNumber: 1 | 2 | 3 = 1
+      if (break1Start || break1End) breakNumber = 1
+      else if (break2Start || break2End) breakNumber = 2
+      else if (break3Start || break3End) breakNumber = 3
+
+      console.log("[v0] Checking for duplicate break:", breakNumber)
+
+      const duplicateCheck = checkBreakDuplicate(
+        selectedEmployee,
+        selectedDate,
+        breakEntries,
+        shiftSchedules,
+        breakNumber,
+      )
+
+      console.log("[v0] Duplicate check result:", duplicateCheck)
+
+      if (duplicateCheck.isDuplicate) {
+        toast.error(duplicateCheck.message)
+        return
+      }
+
+      // Suggest the correct break number if they're trying to enter the wrong one
+      const nextBreak = getNextBreakNumber(selectedEmployee, selectedDate, breakEntries)
+      if (breakNumber !== nextBreak && nextBreak <= 2) {
+        toast.error(
+          `This employee should be entering Break ${nextBreak} next. ${duplicateCheck.existingBreaks.break1 ? "Break 1 is already completed." : ""} ${duplicateCheck.existingBreaks.break2 ? "Break 2 is already completed." : ""}`,
+        )
+        return
+      }
     }
 
     // Re-evaluate this: Should the schedule verification be mandatory for *all* entries, or only for shift time changes?
@@ -403,9 +442,10 @@ export default function EmployeeBreakDashboard() {
     }
 
     // Check for break times to trigger coverage requirement
-    const hasBreakTimes = break1Start || break1End || break2Start || break2End || break3Start || break3End
+    const hasBreakTimesForCoverageCheck =
+      break1Start || break1End || break2Start || break2End || break3Start || break3End
 
-    if (hasBreakTimes && !coverageEmployee) {
+    if (hasBreakTimesForCoverageCheck && !coverageEmployee) {
       toast.error("Coverage employee is required when entering break times")
       return
     }
@@ -495,6 +535,8 @@ export default function EmployeeBreakDashboard() {
     correctionReason,
     selectedDate,
     employees,
+    breakEntries, // Include breakEntries for checkBreakDuplicate
+    shiftSchedules, // Include shiftSchedules for checkBreakDuplicate
     addBreakEntry,
     analytics,
   ])
