@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +25,7 @@ import EmailSharing from "@/components/email-sharing"
 import AssignBreaksButton from "@/components/assign-breaks-button"
 import AssignedBreakTimesheet from "@/components/assigned-break-timesheet"
 import { getAssignmentForDate, setAssignmentForDate } from "@/lib/break-assignments"
+import { getWorkingToday } from "@/lib/working-today"
 import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
 
 export default function EmployeeBreakDashboard() {
@@ -141,19 +142,6 @@ export default function EmployeeBreakDashboard() {
     analytics.trackBreak("assign", `${employeeIds.length} employees on ${dateString}`)
   }
 
-  const getWorkingEmployees = (date: Date) => {
-    const dateString = date.toISOString().split("T")[0]
-    const workingEmployeeIds = breakEntries
-      .filter((entry) => {
-        const entryDate = new Date(entry.date).toISOString().split("T")[0]
-        return entryDate === dateString
-      })
-      .map((entry) => entry.employeeId)
-
-    return employees.filter((emp) => workingEmployeeIds.includes(emp.id))
-  }
-
-  // Get detailed working employee info with break status
   const getDetailedWorkingEmployees = () => {
     const dateString = selectedDate.toISOString().split("T")[0]
     const todayEntries = breakEntries.filter((entry) => new Date(entry.date).toISOString().split("T")[0] === dateString)
@@ -215,7 +203,10 @@ export default function EmployeeBreakDashboard() {
     return "full-coverage"
   }
 
-  const workingEmployees = getWorkingEmployees(selectedDate)
+  const workingEmployees = useMemo(() => {
+    return getWorkingToday(employees, assignedEmployeeIds)
+  }, [employees, assignedEmployeeIds])
+
   const detailedWorkingEmployees = getDetailedWorkingEmployees()
 
   const filteredBreakEntries = breakEntries.filter((entry) => {
@@ -823,16 +814,18 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="employee">Employee *</Label>
+          <Label htmlFor="employee">
+            Employee <span className="text-red-500">*</span>
+          </Label>
           <Select value={employeeId} onValueChange={setEmployeeId} required>
             <SelectTrigger id="employee">
               <SelectValue placeholder="Select employee" />
             </SelectTrigger>
             <SelectContent>
-              {employees
+              {workingEmployees
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((employee) => (
                   <SelectItem key={employee.id} value={employee.id}>
@@ -841,6 +834,9 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
                 ))}
             </SelectContent>
           </Select>
+          {workingEmployees.length === 0 && (
+            <p className="text-xs text-amber-600">No employees assigned. Use "Assign Employees for Breaks" first.</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -910,7 +906,7 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
       </div>
 
       {isEligibleForSecondBreak && (
-        <div className="border-t pt-4 mt-4">
+        <div className="space-y-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
           <h3 className="font-medium mb-2">Break 2 (for shifts 6.5+ hours)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
