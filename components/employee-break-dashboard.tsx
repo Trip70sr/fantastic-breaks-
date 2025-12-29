@@ -66,6 +66,8 @@ interface BreakEntryFormProps {
 }
 
 export default function EmployeeBreakDashboard() {
+  console.log("[v0] Dashboard rendering")
+
   const analytics = useAnalytics()
   // usePageAnalytics("Employee Break Dashboard") // This hook seems to be missing in updates
 
@@ -77,6 +79,13 @@ export default function EmployeeBreakDashboard() {
     updateBreakEntry,
     deleteBreakEntry,
   } = useBreakEntries()
+
+  console.log("[v0] Loading states:", {
+    employeesLoading,
+    entriesLoading,
+    employeesCount: employees.length,
+    entriesCount: breakEntries.length,
+  })
 
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [selectedEmployee, setSelectedEmployee] = useState<string>("")
@@ -107,12 +116,15 @@ export default function EmployeeBreakDashboard() {
   const [scheduleCorrected, setScheduleCorrected] = useState(false)
   const [correctionReason, setCorrectionReason] = useState("")
 
-  const [assignmentsLoaded, setAssignmentsLoaded] = useState(false)
-  if (!assignmentsLoaded && typeof window !== "undefined") {
-    const assignments = getBreakAssignments(selectedDate)
-    setAssignedEmployeeIds(assignments.employeeIds)
-    setAssignmentsLoaded(true)
-  }
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const assignments = getBreakAssignments(selectedDate)
+      const schedules = getShiftSchedules()
+      setAssignedEmployeeIds(assignments.employeeIds)
+      setShiftSchedules(schedules)
+      console.log("[v0] Loaded assignments:", assignments.employeeIds.length)
+    }
+  }, [selectedDate])
 
   // Handle save shift schedule (kept from existing code)
   const handleSaveShiftSchedule = useCallback(

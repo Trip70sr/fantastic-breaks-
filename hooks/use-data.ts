@@ -9,36 +9,25 @@ import { initialEmployees } from "@/lib/data"
 const EMPLOYEES_KEY = "employees"
 const BREAK_ENTRIES_KEY = "breakEntries"
 
-// Async fetchers (non-blocking)
 const fetchEmployees = async (): Promise<Employee[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (typeof window === "undefined") {
-        resolve([])
-        return
-      }
-      const data = localStorage.getItem(EMPLOYEES_KEY)
-      if (data) {
-        resolve(JSON.parse(data))
-      } else {
-        localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(initialEmployees))
-        resolve(initialEmployees)
-      }
-    }, 0)
-  })
+  if (typeof window === "undefined") {
+    return []
+  }
+  const data = localStorage.getItem(EMPLOYEES_KEY)
+  if (data) {
+    return JSON.parse(data)
+  } else {
+    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(initialEmployees))
+    return initialEmployees
+  }
 }
 
 const fetchBreakEntries = async (): Promise<BreakEntry[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (typeof window === "undefined") {
-        resolve([])
-        return
-      }
-      const data = localStorage.getItem(BREAK_ENTRIES_KEY)
-      resolve(data ? JSON.parse(data) : [])
-    }, 0)
-  })
+  if (typeof window === "undefined") {
+    return []
+  }
+  const data = localStorage.getItem(BREAK_ENTRIES_KEY)
+  return data ? JSON.parse(data) : []
 }
 
 // Debounced write to prevent excessive localStorage writes
@@ -57,7 +46,6 @@ export function useEmployees() {
   const { data, error, isLoading } = useSWR<Employee[]>(EMPLOYEES_KEY, fetchEmployees, {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
-    fallbackData: [],
   })
 
   const updateEmployees = useCallback((employees: Employee[]) => {
@@ -108,7 +96,6 @@ export function useBreakEntries() {
   const { data, error, isLoading } = useSWR<BreakEntry[]>(BREAK_ENTRIES_KEY, fetchBreakEntries, {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
-    fallbackData: [],
   })
 
   const updateBreakEntries = useCallback((entries: BreakEntry[]) => {
