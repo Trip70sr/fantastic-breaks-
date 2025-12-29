@@ -49,3 +49,5 @@ export interface ComplianceSettings {
   notificationEmails: string[]
   notificationsEnabled: boolean
 }
+
+export type Department = string
