@@ -21,6 +21,13 @@ export function getAssignmentForDate(date: string): BreakAssignment | null {
   return assignments.find((a) => a.date === date) || null
 }
 
+export function getBreakAssignments(date: string): { employeeIds: string[] } {
+  const assignment = getAssignmentForDate(date)
+  return {
+    employeeIds: assignment?.employeeIds || [],
+  }
+}
+
 export function setAssignmentForDate(date: string, employeeIds: string[], assignedBy: string): void {
   const assignments = loadAssignments()
   const existingIndex = assignments.findIndex((a) => a.date === date)
@@ -51,6 +58,10 @@ export function setAssignmentForDate(date: string, employeeIds: string[], assign
       employeeIds,
     },
   })
+}
+
+export function saveBreakAssignments(date: string, employeeIds: string[]): void {
+  setAssignmentForDate(date, employeeIds, "manager")
 }
 
 export function clearAssignmentForDate(date: string, clearedBy: string): void {
