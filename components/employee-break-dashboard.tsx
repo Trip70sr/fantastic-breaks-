@@ -14,7 +14,7 @@ import type { Employee, BreakEntry, Department, ShiftScheduleEntry, ShiftVerific
 import { initialEmployees } from "@/lib/data"
 import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Download, Database, CheckCircle, XCircle, AlertTriangle, Mail } from "lucide-lucide-react"
+import { CalendarIcon, Download, Database, CheckCircle, XCircle, AlertTriangle, Mail } from "lucide-react"
 import { format } from "date-fns"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
