@@ -22,7 +22,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, PieCha
 interface ManagementAccessProps {
   employees: Employee[]
   breakEntries: BreakEntry[]
-  selectedDate: Date
+  selectedDate: string
   onFilterChange: (filters: {
     showAllDepartments: boolean
     showMissingBreaks: boolean
@@ -59,10 +59,7 @@ export default function ManagementAccess({
     onFilterChange(newFilters)
   }
 
-  const dateString =
-    selectedDate instanceof Date
-      ? selectedDate.toISOString().split("T")[0]
-      : new Date(selectedDate).toISOString().split("T")[0]
+  const dateString = selectedDate
   const todayEntries = breakEntries.filter((entry) => new Date(entry.date).toISOString().split("T")[0] === dateString)
 
   // Calculate statistics
