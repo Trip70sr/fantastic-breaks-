@@ -30,11 +30,12 @@ export interface AdminCredentials {
 export interface BreakViolation {
   id: string
   employeeId: string
-  date: string
-  violationType: "excessive_duration" | "unauthorized_break" | "insufficient_rest"
+  employeeName: string
+  date: string // ISO date
+  violationType: "overage" | "shortage" | "missed" | "late" | "insufficient_rest"
   description: string
-  breakDuration: number // in minutes
-  expectedDuration: number // in minutes
+  breakDuration: number // minutes taken
+  expectedDuration: number // minutes allowed
   shiftHours: number
   revenueImpact: number // in dollars
 }
@@ -48,6 +49,13 @@ export interface ComplianceSettings {
   }
   notificationEmails: string[]
   notificationsEnabled: boolean
+}
+
+export interface RevenueTrend {
+  period: string
+  lostMinutes: number
+  lostHours: number
+  lostRevenue: number
 }
 
 export type Department = string
