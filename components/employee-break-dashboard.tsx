@@ -138,7 +138,7 @@ export default function EmployeeBreakDashboard() {
     const dateString = selectedDate.toISOString().split("T")[0]
     setAssignmentForDate(dateString, employeeIds, "manager") // TODO: Get actual user role
     setAssignedEmployeeIds(employeeIds)
-    analytics.trackEvent("Assign Breaks", { count: employeeIds.length, date: dateString })
+    analytics.trackBreak("assign", `${employeeIds.length} employees on ${dateString}`)
   }
 
   const getWorkingEmployees = (date: Date) => {
