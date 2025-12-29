@@ -59,8 +59,10 @@ export default function ManagementAccess({
     onFilterChange(newFilters)
   }
 
-  // Get today's entries
-  const dateString = selectedDate.toISOString().split("T")[0]
+  const dateString =
+    selectedDate instanceof Date
+      ? selectedDate.toISOString().split("T")[0]
+      : new Date(selectedDate).toISOString().split("T")[0]
   const todayEntries = breakEntries.filter((entry) => new Date(entry.date).toISOString().split("T")[0] === dateString)
 
   // Calculate statistics

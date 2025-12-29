@@ -142,7 +142,7 @@ export default function EmployeeBreakDashboard() {
   const handleExportCSV = () => {
     const formattedDate = format(new Date(selectedDate), "yyyy-MM-dd")
     // Assuming filteredBreakEntries is accessible or needs to be recalculated based on new filters
-    const currentFilteredEntries = breakEntries.filter((entry) => entry.date === selectedDate) // Simplified filter
+    const currentFilteredEntries = breakEntries.filter((entry) => entry.date.split("T")[0] === selectedDate) // Simplified filter
     exportToCSV(currentFilteredEntries, employees, `employee-breaks-${formattedDate}`)
 
     // Track the export action
@@ -238,7 +238,7 @@ export default function EmployeeBreakDashboard() {
   // Original getDetailedWorkingEmployees is kept for reference but might be refactored
   const getDetailedWorkingEmployees = () => {
     const dateString = new Date(selectedDate).toISOString().split("T")[0]
-    const todayEntries = breakEntries.filter((entry) => new Date(entry.date).toISOString().split("T")[0] === dateString)
+    const todayEntries = breakEntries.filter((entry) => entry.date.split("T")[0] === selectedDate)
 
     return todayEntries
       .map((entry) => {
@@ -306,7 +306,7 @@ export default function EmployeeBreakDashboard() {
   // Memoized filteredBreakEntries using new date format
   const filteredBreakEntries = useMemo(() => {
     return breakEntries.filter((entry) => {
-      const entryDate = new Date(entry.date).toISOString().split("T")[0]
+      const entryDate = entry.date.split("T")[0]
       const isSameDate = entryDate === selectedDate
 
       const matchesEmployee = filterEmployee === "all" || entry.employeeId === filterEmployee
@@ -338,9 +338,7 @@ export default function EmployeeBreakDashboard() {
 
   // Quick add break logic (kept from existing code)
   const handleQuickAddBreak = (employeeId: string, breakType: "break1" | "break2") => {
-    const entry = breakEntries.find(
-      (e) => e.employeeId === employeeId && new Date(e.date).toISOString().split("T")[0] === selectedDate,
-    )
+    const entry = breakEntries.find((e) => e.employeeId === employeeId && e.date.split("T")[0] === selectedDate)
 
     if (!entry) {
       toast.error("Entry not found for this employee on this date.")
@@ -462,11 +460,10 @@ export default function EmployeeBreakDashboard() {
       }
     }
 
-    const entry: BreakEntry = {
+    const newEntry: BreakEntry = {
       id: Date.now().toString(),
       employeeId: selectedEmployee,
-      employeeName: employees.find((e) => e.id === selectedEmployee)?.name || "",
-      date: selectedDate, // Use the yyyy-MM-dd format from state
+      date: `${selectedDate}T00:00:00.000Z`, // Convert string date to ISO format with timezone
       shiftStart,
       shiftEnd,
       break1Start: break1Start || undefined,
@@ -484,7 +481,7 @@ export default function EmployeeBreakDashboard() {
       // outsideTherapyReason,
     }
 
-    addBreakEntry(entry)
+    addBreakEntry(newEntry)
     analytics.trackBreak("break_entry_added", `${selectedDate}`)
 
     toast.success("Break entry added successfully")
