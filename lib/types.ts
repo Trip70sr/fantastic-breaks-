@@ -3,6 +3,7 @@ export interface Employee {
   name: string
   department: string
   active: boolean
+  hourlyRate: number // Add hourlyRate for revenue loss calculations
 }
 
 export interface BreakEntry {

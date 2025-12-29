@@ -1,6 +1,6 @@
 "use client"
 
-import type { BreakViolation, Employee } from "./types"
+import type { BreakViolation, Employee, RevenueTrend } from "./types"
 
 export interface RevenueImpact {
   violationId: string
@@ -190,4 +190,40 @@ export function exportRevenueReport(impacts: RevenueImpact[], analytics: Revenue
   }
 
   return JSON.stringify(report, null, 2)
+}
+
+const bucketBy = (date: string, level: "day" | "week" | "month" | "year") => {
+  const d = new Date(date)
+  if (level === "day") return d.toISOString().split("T")[0]
+  if (level === "week") {
+    const start = new Date(d)
+    start.setDate(d.getDate() - d.getDay())
+    return start.toISOString().split("T")[0]
+  }
+  if (level === "month") return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+  return `${d.getFullYear()}`
+}
+
+export function generateTrends(impacts: RevenueImpact[], level: "day" | "week" | "month" | "year"): RevenueTrend[] {
+  const map = new Map<string, RevenueTrend>()
+
+  impacts.forEach((i) => {
+    if (i.excessMinutes === 0) return
+
+    const key = bucketBy(i.date, level)
+    const existing = map.get(key) ?? {
+      period: key,
+      lostMinutes: 0,
+      lostHours: 0,
+      lostRevenue: 0,
+    }
+
+    existing.lostMinutes += i.excessMinutes
+    existing.lostHours += i.lostHours
+    existing.lostRevenue += i.lostRevenue
+
+    map.set(key, existing)
+  })
+
+  return Array.from(map.values()).sort((a, b) => a.period.localeCompare(b.period))
 }
