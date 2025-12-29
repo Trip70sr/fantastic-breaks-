@@ -16,6 +16,17 @@ function simpleHash(password: string): string {
   return hash.toString(36)
 }
 
+export type AdminRole = "manager" | "hr_admin" | "super_admin"
+
+export interface AdminPermissions {
+  viewReports: boolean
+  editEmployees: boolean
+  configureSettings: boolean
+  accessAuditTrail: boolean
+  manageUsers: boolean
+  exportData: boolean
+}
+
 export function initializeAdminAccount(): void {
   if (typeof window === "undefined") return
 
@@ -92,6 +103,46 @@ export function getAdminSession(): { username: string; role: string } | null {
 export function logoutAdmin(): void {
   if (typeof window === "undefined") return
   localStorage.removeItem(ADMIN_SESSION_KEY)
+}
+
+export function getPermissions(role: AdminRole): AdminPermissions {
+  switch (role) {
+    case "manager":
+      return {
+        viewReports: true,
+        editEmployees: false,
+        configureSettings: false,
+        accessAuditTrail: false,
+        manageUsers: false,
+        exportData: true,
+      }
+    case "hr_admin":
+      return {
+        viewReports: true,
+        editEmployees: true,
+        configureSettings: true,
+        accessAuditTrail: true,
+        manageUsers: false,
+        exportData: true,
+      }
+    case "super_admin":
+      return {
+        viewReports: true,
+        editEmployees: true,
+        configureSettings: true,
+        accessAuditTrail: true,
+        manageUsers: true,
+        exportData: true,
+      }
+  }
+}
+
+export function hasPermission(permission: keyof AdminPermissions): boolean {
+  const session = getAdminSession()
+  if (!session) return false
+
+  const permissions = getPermissions(session.role as AdminRole)
+  return permissions[permission]
 }
 
 export function changeAdminPassword(username: string, oldPassword: string, newPassword: string): boolean {
