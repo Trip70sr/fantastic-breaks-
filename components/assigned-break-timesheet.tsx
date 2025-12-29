@@ -8,6 +8,7 @@ import { Clock, CheckCircle, AlertTriangle, Play } from "lucide-react"
 import type { Employee, BreakEntry, ShiftScheduleEntry } from "@/lib/types"
 import ShiftScheduleModal from "./shift-schedule-modal"
 import { getRequiredBreaks } from "@/lib/colorado-compliance"
+import { hasApprovedWaiver } from "@/lib/break-waiver-storage"
 
 interface AssignedBreakTimesheetProps {
   employees: Employee[]
@@ -160,9 +161,11 @@ export default function AssignedBreakTimesheet({
 
               const schedule = shiftSchedules.find((s) => s.employeeId === emp.id && s.date === dateString)
 
+              const hasWaiver = hasApprovedWaiver(emp.id, dateString)
+
               const { breaksTaken, requiredBreaks, status, shiftHours } = getBreakStatus(entry, schedule)
 
-              const breakOverdue = isBreakOverdue(entry, schedule)
+              const breakOverdue = !hasWaiver && isBreakOverdue(entry, schedule)
 
               const statusConfig = {
                 complete: { color: "bg-green-50 border-green-200", icon: CheckCircle, iconColor: "text-green-600" },
@@ -187,16 +190,27 @@ export default function AssignedBreakTimesheet({
                   <div className="flex items-center gap-3">
                     <StatusIcon className={`h-5 w-5 ${statusConfig.iconColor}`} />
                     <div>
-                      <div className={`font-semibold ${breakOverdue ? "text-red-600" : ""}`}>{emp.name}</div>
+                      <div className={`font-semibold ${breakOverdue ? "text-red-600" : ""}`}>
+                        {emp.name}
+                        {hasWaiver && (
+                          <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 text-xs">
+                            Breaks Waived
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-sm text-muted-foreground">{emp.department}</div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <div className="text-sm font-medium">
-                        {breaksTaken}/{requiredBreaks} breaks
-                      </div>
+                      {hasWaiver ? (
+                        <div className="text-sm font-medium text-purple-600">All breaks waived</div>
+                      ) : (
+                        <div className="text-sm font-medium">
+                          {breaksTaken}/{requiredBreaks} breaks
+                        </div>
+                      )}
                       {shiftDisplay && <div className="text-xs text-muted-foreground">{shiftDisplay}</div>}
                       {schedule && (
                         <div className="text-xs text-blue-600 font-medium">
@@ -206,7 +220,7 @@ export default function AssignedBreakTimesheet({
                     </div>
 
                     <div className="flex gap-2">
-                      {hasShift && breaksTaken < requiredBreaks && (
+                      {!hasWaiver && hasShift && breaksTaken < requiredBreaks && (
                         <Button
                           size="sm"
                           onClick={() => onStartBreak(emp.id, breaksTaken === 0 ? "break1" : "break2")}

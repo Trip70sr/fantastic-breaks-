@@ -23,7 +23,7 @@ export interface BreakEntry {
 export interface AdminCredentials {
   username: string
   passwordHash: string
-  role: "super_admin" | "admin"
+  role: "super_admin" | "admin" | "director" // Added director role
   createdAt: string
   lastLogin?: string
 }
@@ -92,4 +92,18 @@ export interface ShiftVerification {
   correctedEnd?: string // HH:mm
   timestamp: string // ISO timestamp
   reason?: string // why correction was needed
+}
+
+export interface BreakWaiver {
+  id: string
+  employeeId: string
+  employeeName: string
+  employeeEmail: string
+  date: string // YYYY-MM-DD
+  requestedAt: string // ISO timestamp
+  requestEmailSent: boolean
+  approvedBy?: string // director username
+  approvedAt?: string // ISO timestamp
+  status: "pending" | "approved" | "denied"
+  reason?: string // employee's reason for waiving
 }

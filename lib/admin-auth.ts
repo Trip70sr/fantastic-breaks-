@@ -16,7 +16,7 @@ function simpleHash(password: string): string {
   return hash.toString(36)
 }
 
-export type AdminRole = "manager" | "hr_admin" | "super_admin"
+export type AdminRole = "manager" | "hr_admin" | "super_admin" | "director"
 
 export interface AdminPermissions {
   viewReports: boolean
@@ -125,6 +125,15 @@ export function getPermissions(role: AdminRole): AdminPermissions {
         manageUsers: false,
         exportData: true,
       }
+    case "director":
+      return {
+        viewReports: true,
+        editEmployees: true,
+        configureSettings: true,
+        accessAuditTrail: true,
+        manageUsers: false,
+        exportData: true,
+      }
     case "super_admin":
       return {
         viewReports: true,
@@ -161,4 +170,9 @@ export function changeAdminPassword(username: string, oldPassword: string, newPa
   }
 
   return false
+}
+
+export function isDirector(): boolean {
+  const session = getAdminSession()
+  return session?.role === "director" || session?.role === "super_admin"
 }
