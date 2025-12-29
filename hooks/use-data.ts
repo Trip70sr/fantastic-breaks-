@@ -9,7 +9,7 @@ import { initialEmployees } from "@/lib/data"
 const EMPLOYEES_KEY = "employees"
 const BREAK_ENTRIES_KEY = "breakEntries"
 
-const fetchEmployees = async (): Promise<Employee[]> => {
+const fetchEmployees = (): Employee[] => {
   if (typeof window === "undefined") {
     return initialEmployees
   }
@@ -28,7 +28,7 @@ const fetchEmployees = async (): Promise<Employee[]> => {
   }
 }
 
-const fetchBreakEntries = async (): Promise<BreakEntry[]> => {
+const fetchBreakEntries = (): BreakEntry[] => {
   if (typeof window === "undefined") {
     return []
   }
@@ -59,10 +59,10 @@ const debouncedWrite = (key: string, data: any, delay = 300) => {
 
 // Hook for employees
 export function useEmployees() {
-  const { data, error, isLoading } = useSWR<Employee[]>(EMPLOYEES_KEY, fetchEmployees, {
+  const { data, error, isLoading, isValidating } = useSWR<Employee[]>(EMPLOYEES_KEY, fetchEmployees, {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
-    fallbackData: initialEmployees,
+    suspense: false,
   })
 
   const updateEmployees = useCallback((employees: Employee[]) => {
@@ -99,7 +99,7 @@ export function useEmployees() {
 
   return {
     employees: data || initialEmployees,
-    isLoading,
+    isLoading: isLoading && !data,
     error,
     updateEmployees,
     addEmployee,
@@ -110,10 +110,10 @@ export function useEmployees() {
 
 // Hook for break entries
 export function useBreakEntries() {
-  const { data, error, isLoading } = useSWR<BreakEntry[]>(BREAK_ENTRIES_KEY, fetchBreakEntries, {
+  const { data, error, isLoading, isValidating } = useSWR<BreakEntry[]>(BREAK_ENTRIES_KEY, fetchBreakEntries, {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
-    fallbackData: [],
+    suspense: false,
   })
 
   const updateBreakEntries = useCallback((entries: BreakEntry[]) => {
@@ -150,7 +150,7 @@ export function useBreakEntries() {
 
   return {
     breakEntries: data || [],
-    isLoading,
+    isLoading: isLoading && !data,
     error,
     updateBreakEntries,
     addBreakEntry,
