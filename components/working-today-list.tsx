@@ -3,13 +3,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { Employee } from "@/lib/types"
 
 interface WorkingTodayListProps {
   employees: Employee[]
+  isLoading: boolean
 }
 
-export default function WorkingTodayList({ employees }: WorkingTodayListProps) {
+export default function WorkingTodayList({ employees, isLoading }: WorkingTodayListProps) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center text-muted-foreground">
+            <Skeleton className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="italic text-gray-500">Loading employees...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (employees.length === 0) {
     return (
       <Card>

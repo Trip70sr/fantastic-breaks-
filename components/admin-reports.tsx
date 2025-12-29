@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar, Download, FileText, TrendingDown, Users, AlertCircle } from "lucide-react"
 import type { BreakViolation, Employee, BreakEntry } from "@/lib/types"
 import {
@@ -22,9 +23,10 @@ interface AdminReportsProps {
   violations: BreakViolation[]
   employees: Employee[]
   breakEntries: BreakEntry[]
+  isLoading?: boolean
 }
 
-export default function AdminReports({ violations, employees, breakEntries }: AdminReportsProps) {
+export default function AdminReports({ violations, employees, breakEntries, isLoading = false }: AdminReportsProps) {
   const today = new Date()
   const [selectedDate, setSelectedDate] = useState(today.toISOString().split("T")[0])
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth())
@@ -81,6 +83,57 @@ export default function AdminReports({ violations, employees, breakEntries }: Ad
     { type: "Unauthorized", count: dailyReport.violationsByType.unauthorized },
     { type: "Insufficient Rest", count: dailyReport.violationsByType.insufficientRest },
   ]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <Skeleton className="h-9 w-32" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Skeleton className="h-10 w-full" />
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-[200px] w-full" />
+            </div>
+
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-48" />
+              <div className="flex flex-wrap gap-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-6 w-24" />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

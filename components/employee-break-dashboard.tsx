@@ -32,6 +32,7 @@ import ManagementAccess from "@/components/management-access"
 import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "@/lib/utils"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getVerificationForEmployee, saveShiftVerification } from "@/lib/shift-verification"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const EmailSharing = dynamic(() => import("@/components/email-sharing"), {
   loading: () => <div className="text-center py-8">Loading...</div>,
@@ -488,15 +489,35 @@ export default function EmployeeBreakDashboard() {
 
   if (employeesLoading || entriesLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+
         <Card>
           <CardHeader>
-            <CardTitle>Loading Employee Break Management...</CardTitle>
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4 mb-4">
+              <Skeleton className="h-10 w-40" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-56" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="h-8 bg-slate-200 rounded animate-pulse" />
-              <div className="h-64 bg-slate-100 rounded animate-pulse" />
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
             </div>
           </CardContent>
         </Card>
