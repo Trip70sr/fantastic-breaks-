@@ -31,15 +31,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <GoogleAnalytics />
-      </head>
       <body className={inter.className}>
         <Suspense fallback={<div>Loading...</div>}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50">{children}</div>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-aquamarine-50">{children}</div>
           </ThemeProvider>
         </Suspense>
+        <GoogleAnalytics />
       </body>
     </html>
   )

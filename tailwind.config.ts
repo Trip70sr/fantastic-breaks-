@@ -54,7 +54,16 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
         aquamarine: {
-          DEFAULT: "hsl(var(--aquamarine))",
+          "50": "#ecfdf9",
+          "100": "#d1faee",
+          "200": "#a7f3df",
+          "300": "#6ee7c7",
+          "400": "#34d399",
+          "500": "#10b981",
+          "600": "#059669",
+          "700": "#047857",
+          "800": "#065f46",
+          "900": "#064e3b",
         },
       },
       borderRadius: {

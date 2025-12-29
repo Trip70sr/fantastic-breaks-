@@ -20,6 +20,112 @@ export const COLORADO_BREAK_RULES: ColoradoBreakRules = {
   maxConsecutiveHours: 4, // break required every 4 hours
 }
 
+export interface AbuseThresholds {
+  highRiskOverageCount: number // Number of overages to flag as high risk
+  highRiskLostHours: number // Total lost hours to flag as high risk
+  criticalOverageCount: number // Number of overages for critical flag
+  criticalLostHours: number // Total lost hours for critical flag
+}
+
+export const DEFAULT_ABUSE_THRESHOLDS: AbuseThresholds = {
+  highRiskOverageCount: 3,
+  highRiskLostHours: 1.5,
+  criticalOverageCount: 5,
+  criticalLostHours: 3.0,
+}
+
+export function categorizeViolation(violationType: string): "compliance" | "financial" {
+  switch (violationType) {
+    case "overage":
+    case "excessive_duration":
+    case "unauthorized_break":
+      return "financial" // These cause direct revenue loss
+    case "shortage":
+    case "missed":
+    case "late":
+    case "insufficient_rest":
+      return "compliance" // These are compliance risks but no direct loss
+    default:
+      return "compliance"
+  }
+}
+
+export interface EmployeeRiskProfile {
+  employeeId: string
+  employeeName: string
+  totalOverages: number
+  totalLostHours: number
+  riskLevel: "low" | "medium" | "high" | "critical"
+  complianceViolations: number
+  financialViolations: number
+}
+
+export function assessEmployeeRisk(
+  violations: BreakViolation[],
+  employeeId: string,
+  employeeName: string,
+  thresholds: AbuseThresholds = DEFAULT_ABUSE_THRESHOLDS,
+): EmployeeRiskProfile {
+  const employeeViolations = violations.filter((v) => v.employeeId === employeeId)
+
+  let totalOverages = 0
+  let totalLostHours = 0
+  let complianceViolations = 0
+  let financialViolations = 0
+
+  employeeViolations.forEach((v) => {
+    const category = categorizeViolation(v.violationType)
+
+    if (category === "financial") {
+      financialViolations++
+      const excessMinutes = Math.max(0, v.breakDuration - v.expectedDuration)
+      totalLostHours += excessMinutes / 60
+
+      if (v.violationType === "overage" || v.violationType === "excessive_duration") {
+        totalOverages++
+      }
+    } else {
+      complianceViolations++
+    }
+  })
+
+  // Determine risk level
+  let riskLevel: "low" | "medium" | "high" | "critical" = "low"
+
+  if (totalOverages >= thresholds.criticalOverageCount || totalLostHours >= thresholds.criticalLostHours) {
+    riskLevel = "critical"
+  } else if (totalOverages >= thresholds.highRiskOverageCount || totalLostHours >= thresholds.highRiskLostHours) {
+    riskLevel = "high"
+  } else if (totalOverages > 0 || complianceViolations > 2) {
+    riskLevel = "medium"
+  }
+
+  return {
+    employeeId,
+    employeeName,
+    totalOverages,
+    totalLostHours: Number(totalLostHours.toFixed(2)),
+    riskLevel,
+    complianceViolations,
+    financialViolations,
+  }
+}
+
+export function getAtRiskEmployees(
+  violations: BreakViolation[],
+  employees: Employee[],
+  thresholds: AbuseThresholds = DEFAULT_ABUSE_THRESHOLDS,
+): EmployeeRiskProfile[] {
+  const profiles = employees.map((emp) => assessEmployeeRisk(violations, emp.id, emp.name, thresholds))
+
+  return profiles
+    .filter((p) => p.riskLevel === "high" || p.riskLevel === "critical")
+    .sort((a, b) => {
+      const riskOrder = { critical: 4, high: 3, medium: 2, low: 1 }
+      return riskOrder[b.riskLevel] - riskOrder[a.riskLevel]
+    })
+}
+
 function calculateMinutes(startTime: string, endTime: string): number {
   const [startHour, startMin] = startTime.split(":").map(Number)
   const [endHour, endMin] = endTime.split(":").map(Number)
@@ -86,15 +192,13 @@ export function analyzeBreakCompliance(entry: BreakEntry, employee: Employee): B
 
     if (break1Duration > allowedMax) {
       violations.push({
-        id: `${entry.id}-break1-excessive`,
+        id: `${entry.id}-break1-overage`,
         employeeId: entry.employeeId,
+        employeeName: employee.name,
         date: entry.date,
-        violationType: "excessive_duration",
-        description: `Break 1 exceeded allowed duration by ${break1Duration - allowedMax} minutes`,
+        violationType: "overage",
         breakDuration: break1Duration,
         expectedDuration,
-        shiftHours,
-        revenueImpact: 0, // Will be calculated by revenue system
       })
     }
   }
@@ -110,15 +214,13 @@ export function analyzeBreakCompliance(entry: BreakEntry, employee: Employee): B
 
     if (break2Duration > allowedMax) {
       violations.push({
-        id: `${entry.id}-break2-excessive`,
+        id: `${entry.id}-break2-overage`,
         employeeId: entry.employeeId,
+        employeeName: employee.name,
         date: entry.date,
-        violationType: "excessive_duration",
-        description: `Break 2 exceeded allowed duration by ${break2Duration - allowedMax} minutes`,
+        violationType: "overage",
         breakDuration: break2Duration,
         expectedDuration,
-        shiftHours,
-        revenueImpact: 0,
       })
     }
   }
@@ -127,30 +229,26 @@ export function analyzeBreakCompliance(entry: BreakEntry, employee: Employee): B
   const totalRequiredBreaks = restBreaks + mealBreaks
   if (breakCount > totalRequiredBreaks) {
     violations.push({
-      id: `${entry.id}-unauthorized-breaks`,
+      id: `${entry.id}-unauthorized`,
       employeeId: entry.employeeId,
+      employeeName: employee.name,
       date: entry.date,
-      violationType: "unauthorized_break",
-      description: `Took ${breakCount} breaks when only ${totalRequiredBreaks} authorized for ${shiftHours.toFixed(1)} hour shift`,
+      violationType: "missed",
       breakDuration: actualBreakMinutes,
       expectedDuration: totalRequiredBreakMinutes,
-      shiftHours,
-      revenueImpact: 0,
     })
   }
 
   // Check if employee is not taking sufficient rest (missing required breaks)
   if (shiftHours >= rules.minShiftForBreak && breakCount < restBreaks) {
     violations.push({
-      id: `${entry.id}-insufficient-rest`,
+      id: `${entry.id}-insufficient`,
       employeeId: entry.employeeId,
+      employeeName: employee.name,
       date: entry.date,
       violationType: "insufficient_rest",
-      description: `Only took ${breakCount} breaks when ${restBreaks} rest breaks required for ${shiftHours.toFixed(1)} hour shift`,
       breakDuration: actualBreakMinutes,
       expectedDuration: totalRequiredBreakMinutes,
-      shiftHours,
-      revenueImpact: 0,
     })
   }
 
@@ -192,10 +290,23 @@ export function getViolationsByType(violations: BreakViolation[], type: string):
 }
 
 export function getViolationStats(violations: BreakViolation[]) {
+  let complianceCount = 0
+  let financialCount = 0
+
+  violations.forEach((v) => {
+    if (categorizeViolation(v.violationType) === "financial") {
+      financialCount++
+    } else {
+      complianceCount++
+    }
+  })
+
   return {
     total: violations.length,
-    excessive: violations.filter((v) => v.violationType === "excessive_duration").length,
-    unauthorized: violations.filter((v) => v.violationType === "unauthorized_break").length,
+    financial: financialCount,
+    compliance: complianceCount,
+    overage: violations.filter((v) => v.violationType === "overage").length,
+    missed: violations.filter((v) => v.violationType === "missed").length,
     insufficientRest: violations.filter((v) => v.violationType === "insufficient_rest").length,
   }
 }
