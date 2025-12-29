@@ -11,13 +11,19 @@ const BREAK_ENTRIES_KEY = "breakEntries"
 
 const fetchEmployees = async (): Promise<Employee[]> => {
   if (typeof window === "undefined") {
-    return []
+    return initialEmployees
   }
-  const data = localStorage.getItem(EMPLOYEES_KEY)
-  if (data) {
-    return JSON.parse(data)
-  } else {
-    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(initialEmployees))
+
+  try {
+    const data = localStorage.getItem(EMPLOYEES_KEY)
+    if (data) {
+      return JSON.parse(data)
+    } else {
+      localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(initialEmployees))
+      return initialEmployees
+    }
+  } catch (error) {
+    console.error("[v0] Error fetching employees:", error)
     return initialEmployees
   }
 }
@@ -26,8 +32,14 @@ const fetchBreakEntries = async (): Promise<BreakEntry[]> => {
   if (typeof window === "undefined") {
     return []
   }
-  const data = localStorage.getItem(BREAK_ENTRIES_KEY)
-  return data ? JSON.parse(data) : []
+
+  try {
+    const data = localStorage.getItem(BREAK_ENTRIES_KEY)
+    return data ? JSON.parse(data) : []
+  } catch (error) {
+    console.error("[v0] Error fetching break entries:", error)
+    return []
+  }
 }
 
 // Debounced write to prevent excessive localStorage writes
@@ -36,7 +48,11 @@ const debouncedWrite = (key: string, data: any, delay = 300) => {
   if (writeTimeout) clearTimeout(writeTimeout)
   writeTimeout = setTimeout(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(key, JSON.stringify(data))
+      try {
+        localStorage.setItem(key, JSON.stringify(data))
+      } catch (error) {
+        console.error("[v0] Error writing to localStorage:", error)
+      }
     }
   }, delay)
 }
@@ -46,6 +62,7 @@ export function useEmployees() {
   const { data, error, isLoading } = useSWR<Employee[]>(EMPLOYEES_KEY, fetchEmployees, {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
+    fallbackData: initialEmployees,
   })
 
   const updateEmployees = useCallback((employees: Employee[]) => {
@@ -55,7 +72,7 @@ export function useEmployees() {
 
   const addEmployee = useCallback(
     (employee: Employee) => {
-      const current = data || []
+      const current = data || initialEmployees
       const updated = [...current, employee]
       updateEmployees(updated)
     },
@@ -64,7 +81,7 @@ export function useEmployees() {
 
   const updateEmployee = useCallback(
     (id: string, updates: Partial<Employee>) => {
-      const current = data || []
+      const current = data || initialEmployees
       const updated = current.map((e) => (e.id === id ? { ...e, ...updates } : e))
       updateEmployees(updated)
     },
@@ -73,7 +90,7 @@ export function useEmployees() {
 
   const deleteEmployee = useCallback(
     (id: string) => {
-      const current = data || []
+      const current = data || initialEmployees
       const updated = current.filter((e) => e.id !== id)
       updateEmployees(updated)
     },
@@ -81,7 +98,7 @@ export function useEmployees() {
   )
 
   return {
-    employees: data || [],
+    employees: data || initialEmployees,
     isLoading,
     error,
     updateEmployees,
@@ -96,6 +113,7 @@ export function useBreakEntries() {
   const { data, error, isLoading } = useSWR<BreakEntry[]>(BREAK_ENTRIES_KEY, fetchBreakEntries, {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
+    fallbackData: [],
   })
 
   const updateBreakEntries = useCallback((entries: BreakEntry[]) => {
