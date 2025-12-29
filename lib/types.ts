@@ -79,3 +79,17 @@ export interface ShiftScheduleEntry {
   selfReported: boolean // true if employee entered their own schedule
   reportedAt: string // ISO timestamp
 }
+
+export interface ShiftVerification {
+  id: string
+  employeeId: string
+  date: string // YYYY-MM-DD
+  verifiedBy: string // coverage employee id
+  status: "verified" | "corrected"
+  originalStart?: string // HH:mm
+  originalEnd?: string // HH:mm
+  correctedStart?: string // HH:mm
+  correctedEnd?: string // HH:mm
+  timestamp: string // ISO timestamp
+  reason?: string // why correction was needed
+}

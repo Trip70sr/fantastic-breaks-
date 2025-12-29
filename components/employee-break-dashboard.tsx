@@ -10,11 +10,11 @@ import BreakTimesheetTable from "@/components/break-timesheet-table"
 import EmployeeManagement from "@/components/employee-management"
 import DataBackupRestore from "@/components/data-backup-restore"
 import ManagementAccess from "@/components/management-access"
-import type { Employee, BreakEntry, Department, ShiftScheduleEntry } from "@/lib/types"
+import type { Employee, BreakEntry, Department, ShiftScheduleEntry, ShiftVerification } from "@/lib/types"
 import { initialEmployees } from "@/lib/data"
 import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Download, Database, CheckCircle, XCircle, AlertTriangle, Mail } from "lucide-react"
+import { CalendarIcon, Download, Database, CheckCircle, XCircle, AlertTriangle, Mail } from "lucide-lucide-react"
 import { format } from "date-fns"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,6 +28,8 @@ import { getAssignmentForDate, setAssignmentForDate } from "@/lib/break-assignme
 import { getWorkingToday } from "@/lib/working-today"
 import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
 import { getShiftSchedules, saveShiftSchedule } from "@/lib/shift-storage"
+import { saveShiftVerification, getVerificationForEmployee } from "@/lib/shift-verification-storage"
+import ShiftVerificationBlock from "./shift-verification-block"
 
 export default function EmployeeBreakDashboard() {
   const analytics = useAnalytics()
@@ -498,6 +500,7 @@ export default function EmployeeBreakDashboard() {
                   workingEmployees={workingEmployees}
                   onAddEntry={(entry) => handleAddBreakEntry({ ...entry, date: selectedDate.toISOString() })}
                   selectedDate={selectedDate}
+                  shiftSchedules={shiftSchedules}
                 />
               </TabsContent>
             </Tabs>
@@ -764,9 +767,16 @@ interface BreakEntryFormProps {
   workingEmployees: Employee[]
   onAddEntry: (entry: Omit<BreakEntry, "id">) => void
   selectedDate: Date
+  shiftSchedules: ShiftScheduleEntry[]
 }
 
-function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate }: BreakEntryFormProps) {
+function BreakEntryForm({
+  employees,
+  workingEmployees,
+  onAddEntry,
+  selectedDate,
+  shiftSchedules,
+}: BreakEntryFormProps) {
   const [employeeId, setEmployeeId] = useState("")
   const [shiftStart, setShiftStart] = useState("")
   const [shiftEnd, setShiftEnd] = useState("")
@@ -779,6 +789,13 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
   const [outsideTherapyStart, setOutsideTherapyStart] = useState("")
   const [outsideTherapyEnd, setOutsideTherapyEnd] = useState("")
   const [outsideTherapyReason, setOutsideTherapyReason] = useState("")
+
+  const [verified, setVerified] = useState(false)
+  const [corrected, setCorrected] = useState(false)
+  const [correctionReason, setCorrectionReason] = useState("")
+  const [originalShiftStart, setOriginalShiftStart] = useState("")
+  const [originalShiftEnd, setOriginalShiftEnd] = useState("")
+  const [shiftTimesLocked, setShiftTimesLocked] = useState(false)
 
   // Calculate shift hours in real-time
   const shiftHours = calculateShiftHours(shiftStart, shiftEnd)
@@ -793,12 +810,99 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
     }
   }, [isEligibleForSecondBreak])
 
+  useEffect(() => {
+    if (!employeeId) {
+      setShiftStart("")
+      setShiftEnd("")
+      setOriginalShiftStart("")
+      setOriginalShiftEnd("")
+      setShiftTimesLocked(false)
+      setVerified(false)
+      setCorrected(false)
+      setCorrectionReason("")
+      return
+    }
+
+    const dateStr = format(selectedDate, "yyyy-MM-dd")
+    const schedule = shiftSchedules.find((s) => s.employeeId === employeeId && s.date === dateStr)
+
+    if (schedule) {
+      setShiftStart(schedule.startTime)
+      setShiftEnd(schedule.endTime)
+      setOriginalShiftStart(schedule.startTime)
+      setOriginalShiftEnd(schedule.endTime)
+      setShiftTimesLocked(true)
+
+      // Check if already verified
+      const existingVerification = getVerificationForEmployee(employeeId, dateStr)
+      if (existingVerification) {
+        setVerified(existingVerification.status === "verified")
+        setCorrected(existingVerification.status === "corrected")
+        if (existingVerification.status === "corrected") {
+          setShiftStart(existingVerification.correctedStart || schedule.startTime)
+          setShiftEnd(existingVerification.correctedEnd || schedule.endTime)
+          setCorrectionReason(existingVerification.reason || "")
+        }
+      }
+    } else {
+      setShiftTimesLocked(false)
+    }
+  }, [employeeId, selectedDate, shiftSchedules])
+
+  const handleVerify = () => {
+    setVerified(!verified)
+    if (!verified) {
+      setCorrected(false)
+      setCorrectionReason("")
+      // Reset times to original if switching from correction
+      if (originalShiftStart && originalShiftEnd) {
+        setShiftStart(originalShiftStart)
+        setShiftEnd(originalShiftEnd)
+      }
+    }
+  }
+
+  const handleCorrect = () => {
+    setCorrected(!corrected)
+    if (!corrected) {
+      setVerified(false)
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!employeeId || !shiftStart || !shiftEnd) {
       alert("Please fill in all required fields (Employee, Shift Start, and Shift End)")
       return
+    }
+
+    if (shiftTimesLocked && !verified && !corrected) {
+      alert("You must verify or correct the employee's schedule before submitting a break entry.")
+      return
+    }
+
+    if (corrected && !correctionReason.trim()) {
+      alert("Please provide a reason for the schedule correction.")
+      return
+    }
+
+    if (shiftTimesLocked && (verified || corrected)) {
+      const dateStr = format(selectedDate, "yyyy-MM-dd")
+      const verification: ShiftVerification = {
+        id: `verification-${Date.now()}-${Math.random()}`,
+        employeeId,
+        date: dateStr,
+        verifiedBy: coverageEmployeeId || "system", // Placeholder, should be actual user
+        status: corrected ? "corrected" : "verified",
+        originalStart: originalShiftStart,
+        originalEnd: originalShiftEnd,
+        correctedStart: corrected ? shiftStart : undefined,
+        correctedEnd: corrected ? shiftEnd : undefined,
+        timestamp: new Date().toISOString(),
+        reason: corrected ? correctionReason : undefined,
+      }
+      saveShiftVerification(verification)
     }
 
     onAddEntry({
@@ -830,6 +934,12 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
     setOutsideTherapyStart("")
     setOutsideTherapyEnd("")
     setOutsideTherapyReason("")
+    setVerified(false)
+    setCorrected(false)
+    setCorrectionReason("")
+    setOriginalShiftStart("")
+    setOriginalShiftEnd("")
+    setShiftTimesLocked(false)
   }
 
   return (
@@ -872,13 +982,23 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
             type="time"
             value={shiftStart}
             onChange={(e) => setShiftStart(e.target.value)}
+            readOnly={shiftTimesLocked && !corrected}
+            className={shiftTimesLocked && !corrected ? "bg-blue-50 cursor-not-allowed" : ""}
             required
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="shiftEnd">Shift End Time *</Label>
-          <Input id="shiftEnd" type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} required />
+          <Input
+            id="shiftEnd"
+            type="time"
+            value={shiftEnd}
+            onChange={(e) => setShiftEnd(e.target.value)}
+            readOnly={shiftTimesLocked && !corrected}
+            className={shiftTimesLocked && !corrected ? "bg-blue-50 cursor-not-allowed" : ""}
+            required
+          />
         </div>
 
         <div className="space-y-2">
@@ -888,6 +1008,17 @@ function BreakEntryForm({ employees, workingEmployees, onAddEntry, selectedDate 
           </div>
         </div>
       </div>
+
+      {shiftTimesLocked && (
+        <ShiftVerificationBlock
+          verified={verified}
+          corrected={corrected}
+          correctionReason={correctionReason}
+          onVerify={handleVerify}
+          onCorrect={handleCorrect}
+          onReasonChange={setCorrectionReason}
+        />
+      )}
 
       <div className="border-t pt-4 mt-4">
         <h3 className="font-medium mb-2">Break 1</h3>
