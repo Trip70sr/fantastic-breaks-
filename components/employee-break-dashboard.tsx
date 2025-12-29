@@ -22,6 +22,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import EmailSharing from "@/components/email-sharing"
+import AssignBreaksButton from "@/components/assign-breaks-button"
+import AssignedBreakTimesheet from "@/components/assigned-break-timesheet"
+import { getAssignmentForDate, setAssignmentForDate } from "@/lib/break-assignments"
 import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
 
 export default function EmployeeBreakDashboard() {
@@ -43,6 +46,7 @@ export default function EmployeeBreakDashboard() {
     showOvertimeAlerts: false,
   })
   const [isEmailSharingOpen, setIsEmailSharingOpen] = useState(false)
+  const [assignedEmployeeIds, setAssignedEmployeeIds] = useState<string[]>([])
 
   // Load employees from localStorage or use initial data
   useEffect(() => {
@@ -71,6 +75,12 @@ export default function EmployeeBreakDashboard() {
     localStorage.setItem("employees", JSON.stringify(employees))
     localStorage.setItem("lastDataUpdate", new Date().toISOString())
   }, [employees])
+
+  useEffect(() => {
+    const dateString = selectedDate.toISOString().split("T")[0]
+    const assignment = getAssignmentForDate(dateString)
+    setAssignedEmployeeIds(assignment?.employeeIds || [])
+  }, [selectedDate])
 
   const handleExportCSV = () => {
     const formattedDate = format(selectedDate, "yyyy-MM-dd")
@@ -122,6 +132,13 @@ export default function EmployeeBreakDashboard() {
     localStorage.setItem("lastDataUpdate", new Date().toISOString())
 
     analytics.trackData("Restore Data", `${restoredEmployees.length} employees, ${restoredBreakEntries.length} entries`)
+  }
+
+  const handleAssignEmployees = (employeeIds: string[]) => {
+    const dateString = selectedDate.toISOString().split("T")[0]
+    setAssignmentForDate(dateString, employeeIds, "manager") // TODO: Get actual user role
+    setAssignedEmployeeIds(employeeIds)
+    analytics.trackEvent("Assign Breaks", { count: employeeIds.length, date: dateString })
   }
 
   const getWorkingEmployees = (date: Date) => {
@@ -424,7 +441,27 @@ export default function EmployeeBreakDashboard() {
             <CardTitle>Break Timesheet</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="timesheet" className="w-full">
+            <AssignBreaksButton
+              employees={employees.filter(
+                (e) =>
+                  managementFilters.showAllDepartments ||
+                  filterDepartment === "all" ||
+                  e.department === filterDepartment,
+              )}
+              assignedIds={assignedEmployeeIds}
+              onAssign={handleAssignEmployees}
+              date={selectedDate.toISOString().split("T")[0]}
+            />
+
+            <AssignedBreakTimesheet
+              employees={employees}
+              assignedIds={assignedEmployeeIds}
+              breakEntries={breakEntries}
+              date={selectedDate.toISOString().split("T")[0]}
+              onStartBreak={handleQuickAddBreak}
+            />
+
+            <Tabs defaultValue="timesheet" className="w-full mt-6">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="timesheet">Timesheet</TabsTrigger>
                 <TabsTrigger value="working">Working Today</TabsTrigger>

@@ -15,6 +15,8 @@ export interface AuditEntry {
     violationId?: string
     changes?: Record<string, any>
     reason?: string
+    target?: string
+    targetId?: string
   }
   ipAddress?: string
   deviceInfo?: string
@@ -177,4 +179,47 @@ export function exportAuditTrail(startDate?: string, endDate?: string): string {
 export function exportWageDefenseReport(): string {
   const records = getWageClaimDefenseRecords()
   return JSON.stringify(records, null, 2)
+}
+
+export function logAuditAction(params: {
+  action: string
+  actor: string
+  target: string
+  targetId: string
+  details: Record<string, any>
+}): void {
+  const auditAction = mapToAuditAction(params.action)
+  const actorRole = determineActorRole(params.actor)
+
+  createAuditEntry(
+    auditAction,
+    params.actor,
+    actorRole,
+    {
+      ...params.details,
+      target: params.target,
+      targetId: params.targetId,
+    },
+    {},
+  )
+}
+
+function mapToAuditAction(action: string): AuditEntry["action"] {
+  const actionMap: Record<string, AuditEntry["action"]> = {
+    assign_breaks: "manual_edit",
+    clear_break_assignment: "manual_edit",
+    edit_employee: "manual_edit",
+    delete_employee: "manual_edit",
+    generate_report: "report_generated",
+    update_settings: "settings_changed",
+  }
+  return actionMap[action] || "manual_edit"
+}
+
+function determineActorRole(actor: string): AuditEntry["actorRole"] {
+  // Default to manager for now, can be enhanced with actual role detection
+  if (actor === "super_admin") return "super_admin"
+  if (actor === "hr_admin") return "hr_admin"
+  if (actor === "manager") return "manager"
+  return "employee"
 }

@@ -60,3 +60,10 @@ export interface RevenueTrend {
 }
 
 export type Department = string
+
+export interface BreakAssignment {
+  date: string // YYYY-MM-DD
+  employeeIds: string[]
+  assignedBy: string // admin/manager user
+  assignedAt: string // ISO timestamp
+}
