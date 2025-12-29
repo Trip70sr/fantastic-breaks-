@@ -1,7 +1,6 @@
 "use client"
 
 import type { BreakViolation, Employee } from "./types"
-import { loadComplianceSettings } from "./compliance-storage"
 
 export interface RevenueImpact {
   violationId: string
@@ -9,6 +8,7 @@ export interface RevenueImpact {
   employeeName: string
   date: string
   excessMinutes: number
+  lostHours: number // Added lostHours field for clarity
   hourlyRate: number
   lostRevenue: number
   violationType: string
@@ -24,6 +24,13 @@ export interface RevenueAnalytics {
   averageLossPerViolation: number
   impactByEmployee: Map<string, number>
   impactByType: Map<string, number>
+}
+
+const getExcessMinutes = (v: BreakViolation): number => {
+  if (v.violationType === "overage" || v.violationType === "missed") {
+    return Math.max(0, v.breakDuration - v.expectedDuration)
+  }
+  return 0 // shortages do not cause revenue loss
 }
 
 export function calculateViolationRevenue(violation: BreakViolation, hourlyRate: number): number {
@@ -49,29 +56,26 @@ export function calculateViolationRevenue(violation: BreakViolation, hourlyRate:
   return Number((lostHours * hourlyRate).toFixed(2))
 }
 
-export function calculateRevenueImpacts(
-  violations: BreakViolation[],
-  employees: Employee[],
-  hourlyRate?: number,
-): RevenueImpact[] {
-  const settings = loadComplianceSettings()
-  const rate = hourlyRate || settings.hourlyRate
+export function calculateRevenueImpacts(violations: BreakViolation[], employees: Employee[]): RevenueImpact[] {
+  const employeeMap = new Map(employees.map((e) => [e.id, e]))
 
-  return violations.map((violation) => {
-    const employee = employees.find((e) => e.id === violation.employeeId)
-    const lostRevenue = calculateViolationRevenue(violation, rate)
-    const excessMinutes =
-      violation.violationType === "insufficient_rest" ? 0 : violation.breakDuration - violation.expectedDuration
+  return violations.map((v) => {
+    const employee = employeeMap.get(v.employeeId)
+    const hourlyRate = employee?.hourlyRate ?? 0
+    const excessMinutes = getExcessMinutes(v)
+    const lostHours = excessMinutes / 60
+    const lostRevenue = Number((lostHours * hourlyRate).toFixed(2))
 
     return {
-      violationId: violation.id,
-      employeeId: violation.employeeId,
-      employeeName: employee?.name || "Unknown",
-      date: violation.date,
+      violationId: v.id,
+      employeeId: v.employeeId,
+      employeeName: v.employeeName,
+      date: v.date,
       excessMinutes,
-      hourlyRate: rate,
+      lostHours,
+      hourlyRate,
       lostRevenue,
-      violationType: violation.violationType,
+      violationType: v.violationType,
     }
   })
 }
