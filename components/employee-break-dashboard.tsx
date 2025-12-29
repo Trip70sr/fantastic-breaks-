@@ -487,40 +487,18 @@ export default function EmployeeBreakDashboard() {
     analytics,
   ])
 
-  if (employeesLoading || entriesLoading) {
+  const isInitialLoading = (employeesLoading || entriesLoading) && employees.length === 0 && breakEntries.length === 0
+
+  if (isInitialLoading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-12 w-64" />
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
         </div>
-
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4 mb-4">
-              <Skeleton className="h-10 w-40" />
-              <Skeleton className="h-10 w-32" />
-            </div>
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-56" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <Skeleton className="h-96" />
       </div>
     )
   }
