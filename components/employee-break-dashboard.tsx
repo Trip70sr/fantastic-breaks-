@@ -887,6 +887,55 @@ function BreakEntryForm({
       return
     }
 
+    const isEnteringBreak = break1Start || break1End || break2Start || break2End
+
+    if (isEnteringBreak) {
+      if (!coverageEmployeeId) {
+        alert("Coverage Employee is required when entering break times.")
+        return
+      }
+
+      if (break1Start && !break1End) {
+        alert("Break 1 End Time is required when Break 1 Start Time is entered.")
+        return
+      }
+
+      if (break1End && !break1Start) {
+        alert("Break 1 Start Time is required when Break 1 End Time is entered.")
+        return
+      }
+
+      if (break2Start && !break2End) {
+        alert("Break 2 End Time is required when Break 2 Start Time is entered.")
+        return
+      }
+
+      if (break2End && !break2Start) {
+        alert("Break 2 Start Time is required when Break 2 End Time is entered.")
+        return
+      }
+
+      if (break1Start && shiftStart && break1Start < shiftStart) {
+        alert("Break 1 Start Time cannot be before Shift Start Time.")
+        return
+      }
+
+      if (break1End && shiftEnd && break1End > shiftEnd) {
+        alert("Break 1 End Time cannot be after Shift End Time.")
+        return
+      }
+
+      if (break2Start && shiftStart && break2Start < shiftStart) {
+        alert("Break 2 Start Time cannot be before Shift Start Time.")
+        return
+      }
+
+      if (break2End && shiftEnd && break2End > shiftEnd) {
+        alert("Break 2 End Time cannot be after Shift End Time.")
+        return
+      }
+    }
+
     if (shiftTimesLocked && (verified || corrected)) {
       const dateStr = format(selectedDate, "yyyy-MM-dd")
       const verification: ShiftVerification = {
