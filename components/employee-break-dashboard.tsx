@@ -33,7 +33,7 @@ import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getVerificationForEmployee, saveShiftVerification } from "@/lib/shift-verification"
 import { Skeleton } from "@/components/ui/skeleton"
-import { checkBreakDuplicate, getNextBreakNumber } from "@/lib/break-validation"
+import { checkBreakDuplicate } from "@/lib/break-validation"
 
 const EmailSharing = dynamic(() => import("@/components/email-sharing"), {
   loading: () => <div className="text-center py-8">Loading...</div>,
@@ -95,8 +95,6 @@ export default function EmployeeBreakDashboard() {
   const [break1End, setBreak1End] = useState("")
   const [break2Start, setBreak2Start] = useState("")
   const [break2End, setBreak2End] = useState("")
-  const [break3Start, setBreak3Start] = useState("") // This seems to be new, original code had break2End
-  const [break3End, setBreak3End] = useState("") // This seems to be new
   const [shiftStart, setShiftStart] = useState("")
   const [shiftEnd, setShiftEnd] = useState("")
   const [filterEmployee, setFilterEmployee] = useState<string>("all") // This was in existing, removed in updates for tabs
@@ -196,7 +194,7 @@ export default function EmployeeBreakDashboard() {
       analytics.trackBreak("Update Break Entry")
       toast.success("Break entry updated")
     },
-    [updateBreakEntry],
+    [updateBreakEntry, analytics],
   )
 
   // Handle delete break entry (kept from existing code, modified for useCallback)
@@ -387,22 +385,35 @@ export default function EmployeeBreakDashboard() {
   const handleSubmitBreakEntry = useCallback(() => {
     console.log("[v0] Starting break entry submission")
 
-    // Validation
     if (!selectedEmployee) {
       toast.error("Please select an employee")
       return
     }
 
-    const hasBreakTimes = break1Start || break1End || break2Start || break2End || break3Start || break3End
+    if (!scheduleVerified && !scheduleCorrected) {
+      toast.error("Please verify or correct the schedule before submitting")
+      return
+    }
 
-    if (hasBreakTimes) {
-      // Determine which break number is being entered
-      let breakNumber: 1 | 2 | 3 = 1
-      if (break1Start || break1End) breakNumber = 1
-      else if (break2Start || break2End) breakNumber = 2
-      else if (break3Start || break3End) breakNumber = 3
+    if (!shiftStart || !shiftEnd) {
+      toast.error("Please enter shift start and end times")
+      return
+    }
 
-      console.log("[v0] Checking for duplicate break:", breakNumber)
+    // Determine which break is being entered
+    let breakNumber: 1 | 2 | 3 = 1
+    if (break2Start && break2End) {
+      breakNumber = 2
+    } else if (break1Start && break1End) {
+      breakNumber = 1
+    }
+
+    // Check for duplicate breaks only if break times are provided
+    if ((break1Start && break1End) || (break2Start && break2End)) {
+      if (!coverageEmployee) {
+        toast.error("Coverage employee is required when entering break times")
+        return
+      }
 
       const duplicateCheck = checkBreakDuplicate(
         selectedEmployee,
@@ -412,71 +423,45 @@ export default function EmployeeBreakDashboard() {
         breakNumber,
       )
 
-      console.log("[v0] Duplicate check result:", duplicateCheck)
-
       if (duplicateCheck.isDuplicate) {
         toast.error(duplicateCheck.message)
         return
       }
 
-      // Suggest the correct break number if they're trying to enter the wrong one
-      const nextBreak = getNextBreakNumber(selectedEmployee, selectedDate, breakEntries)
-      if (breakNumber !== nextBreak && nextBreak <= 2) {
-        toast.error(
-          `This employee should be entering Break ${nextBreak} next. ${duplicateCheck.existingBreaks.break1 ? "Break 1 is already completed." : ""} ${duplicateCheck.existingBreaks.break2 ? "Break 2 is already completed." : ""}`,
-        )
-        return
+      // Validate break times are within shift
+      const [shiftStartHour, shiftStartMin] = shiftStart.split(":").map(Number)
+      const [shiftEndHour, shiftEndMin] = shiftEnd.split(":").map(Number)
+      const shiftStartMinutes = shiftStartHour * 60 + shiftStartMin
+      let shiftEndMinutes = shiftEndHour * 60 + shiftEndMin
+      if (shiftEndMinutes < shiftStartMinutes) shiftEndMinutes += 24 * 60
+
+      if (break1Start && break1End) {
+        const [b1StartHour, b1StartMin] = break1Start.split(":").map(Number)
+        const [b1EndHour, b1EndMin] = break1End.split(":").map(Number)
+        const b1StartMinutes = b1StartHour * 60 + b1StartMin
+        let b1EndMinutes = b1EndHour * 60 + b1EndMin
+        if (b1EndMinutes < b1StartMinutes) b1EndMinutes += 24 * 60
+
+        if (b1StartMinutes < shiftStartMinutes || b1EndMinutes > shiftEndMinutes) {
+          toast.error("Break 1 times must be within shift hours")
+          return
+        }
+      }
+
+      if (break2Start && break2End) {
+        const [b2StartHour, b2StartMin] = break2Start.split(":").map(Number)
+        const [b2EndHour, b2EndMin] = break2End.split(":").map(Number)
+        const b2StartMinutes = b2StartHour * 60 + b2StartMin
+        let b2EndMinutes = b2EndHour * 60 + b2EndMin
+        if (b2EndMinutes < b2StartMinutes) b2EndMinutes += 24 * 60
+
+        if (b2StartMinutes < shiftStartMinutes || b2EndMinutes > shiftEndMinutes) {
+          toast.error("Break 2 times must be within shift hours")
+          return
+        }
       }
     }
 
-    // Re-evaluate this: Should the schedule verification be mandatory for *all* entries, or only for shift time changes?
-    // The original code did not have this explicit check before submitting.
-    if (!scheduleVerified && !scheduleCorrected) {
-      toast.error("Please verify or correct the employee's schedule before submitting")
-      return
-    }
-
-    if (!shiftStart || !shiftEnd) {
-      toast.error("Please enter shift start and end times")
-      return
-    }
-
-    // Check for break times to trigger coverage requirement
-    const hasBreakTimesForCoverageCheck =
-      break1Start || break1End || break2Start || break2End || break3Start || break3End
-
-    if (hasBreakTimesForCoverageCheck && !coverageEmployee) {
-      toast.error("Coverage employee is required when entering break times")
-      return
-    }
-
-    // Break time validation (basic)
-    if (break1Start && !break1End) {
-      toast.error("Please enter Break 1 end time")
-      return
-    }
-    if (break1End && !break1Start) {
-      toast.error("Please enter Break 1 start time")
-      return
-    }
-    if (break2Start && !break2End) {
-      toast.error("Please enter Break 2 end time")
-      return
-    }
-    if (break2End && !break2Start) {
-      toast.error("Please enter Break 2 start time")
-      return
-    }
-    if (break3Start && !break3End) {
-      toast.error("Please enter Break 3 end time")
-      return
-    }
-    if (break3End && !break3Start) {
-      toast.error("Please enter Break 3 start time")
-      return
-    }
-
-    // Create entry
     const entry: BreakEntry = {
       id: Date.now().toString(),
       employeeId: selectedEmployee,
@@ -488,8 +473,7 @@ export default function EmployeeBreakDashboard() {
       break1End: break1End || undefined,
       break2Start: break2Start || undefined,
       break2End: break2End || undefined,
-      break3Start: break3Start || undefined, // New field
-      break3End: break3End || undefined, // New field
+      // Removed break3Start and break3End
       coverageEmployee: coverageEmployee || undefined, // Renamed from coverageEmployeeId in existing code
       // coverage2EmployeeId: coverage2EmployeeId || undefined, // This was in existing, removed in updates
       scheduleVerified,
@@ -512,8 +496,7 @@ export default function EmployeeBreakDashboard() {
     setBreak1End("")
     setBreak2Start("")
     setBreak2End("")
-    setBreak3Start("") // Reset new field
-    setBreak3End("") // Reset new field
+    // Removed break3 reset
     setShiftStart("")
     setShiftEnd("")
     setScheduleVerified(false)
@@ -529,8 +512,7 @@ export default function EmployeeBreakDashboard() {
     break1End,
     break2Start,
     break2End,
-    break3Start, // Include new fields in reset
-    break3End, // Include new fields in reset
+    // Removed break3 fields from reset
     coverageEmployee,
     correctionReason,
     selectedDate,
@@ -541,9 +523,7 @@ export default function EmployeeBreakDashboard() {
     analytics,
   ])
 
-  const isInitialLoading = (employeesLoading || entriesLoading) && employees.length === 0 && breakEntries.length === 0
-
-  if (isInitialLoading) {
+  if (employeesLoading && !employees.length) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <Skeleton className="h-12 w-64" />
@@ -867,16 +847,7 @@ export default function EmployeeBreakDashboard() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Break 3 Start</Label>
-                          <Input type="time" value={break3Start} onChange={(e) => setBreak3Start(e.target.value)} />
-                        </div>
-                        <div>
-                          <Label>Break 3 End</Label>
-                          <Input type="time" value={break3End} onChange={(e) => setBreak3End(e.target.value)} />
-                        </div>
-                      </div>
+                      {/* Removed Break 3 section */}
                     </div>
 
                     <Button onClick={handleSubmitBreakEntry} className="w-full">
@@ -1259,6 +1230,7 @@ function BreakEntryForm({
     }
 
     const isEnteringBreak = break1Start || break1End || break2Start || break2End
+    // Removed break3 check
 
     if (isEnteringBreak) {
       if (!coverageEmployeeId) {
@@ -1285,6 +1257,7 @@ function BreakEntryForm({
         alert("Break 2 Start Time is required when Break 2 End Time is entered.")
         return
       }
+      // Removed break3 validation
 
       if (break1Start && shiftStart && break1Start < shiftStart) {
         alert("Break 1 Start Time cannot be before Shift Start Time.")
@@ -1305,6 +1278,7 @@ function BreakEntryForm({
         alert("Break 2 End Time cannot be after Shift End Time.")
         return
       }
+      // Removed break3 validation
     }
 
     if (shiftTimesLocked && (verified || corrected)) {
@@ -1334,6 +1308,7 @@ function BreakEntryForm({
       break1End,
       break2Start,
       break2End,
+      // Removed break3 fields
       coverageEmployeeId,
       coverage2EmployeeId,
       outsideTherapyStart,
@@ -1349,6 +1324,7 @@ function BreakEntryForm({
     setBreak1End("")
     setBreak2Start("")
     setBreak2End("")
+    // Removed break3 reset
     setCoverageEmployeeId("")
     setCoverage2EmployeeId("")
     setOutsideTherapyStart("")
