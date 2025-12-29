@@ -845,19 +845,17 @@ export default function EmployeeBreakDashboard() {
         </div>
       )}
 
-      {isEmployeeManagementOpen && (
-        <EmployeeManagement
-          employees={employees}
-          breakEntries={breakEntries}
-          selectedDate={selectedDate}
-          onAddEmployee={handleAddEmployee}
-          onUpdateEmployee={handleUpdateEmployee}
-          onDeleteEmployee={handleDeleteEmployee}
-          onAddBreakEntry={handleAddBreakEntry}
-          onUpdateBreakEntry={handleUpdateBreakEntry}
-          onClose={() => setIsEmployeeManagementOpen(false)}
-        />
-      )}
+      <EmployeeManagement
+        isOpen={isEmployeeManagementOpen}
+        onClose={() => setIsEmployeeManagementOpen(false)}
+        employees={employees}
+        breakEntries={breakEntries}
+        onAddEmployee={handleAddEmployee}
+        onUpdateEmployee={handleUpdateEmployee}
+        onDeleteEmployee={handleDeleteEmployee}
+        onAddBreakEntry={handleAddBreakEntry}
+        onUpdateBreakEntry={handleUpdateBreakEntry}
+      />
 
       {isBackupRestoreOpen && (
         <DataBackupRestore
