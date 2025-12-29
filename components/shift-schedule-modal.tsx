@@ -25,6 +25,7 @@ export default function ShiftScheduleModal({
 }: ShiftScheduleModalProps) {
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
+  const [therapyHours, setTherapyHours] = useState(0)
   const [therapyMinutes, setTherapyMinutes] = useState(0)
 
   const calculateNetMinutes = () => {
@@ -42,11 +43,13 @@ export default function ShiftScheduleModal({
     }
 
     const totalMinutes = endMinutes - startMinutes
-    return Math.max(0, totalMinutes - therapyMinutes)
+    const totalTherapyMinutes = therapyHours * 60 + therapyMinutes
+    return Math.max(0, totalMinutes - totalTherapyMinutes)
   }
 
   const netMinutes = calculateNetMinutes()
   const netHours = (netMinutes / 60).toFixed(2)
+  const totalTherapyMinutes = therapyHours * 60 + therapyMinutes
 
   const handleSave = () => {
     if (!startTime || !endTime) {
@@ -60,7 +63,7 @@ export default function ShiftScheduleModal({
       date,
       startTime,
       endTime,
-      therapyMinutes,
+      therapyMinutes: totalTherapyMinutes,
       netWorkMinutes: netMinutes,
       selfReported: true,
       reportedAt: new Date().toISOString(),
@@ -110,17 +113,41 @@ export default function ShiftScheduleModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="therapy-minutes">Therapy Time (minutes, excluded from work hours)</Label>
-            <Input
-              id="therapy-minutes"
-              type="number"
-              min={0}
-              value={therapyMinutes}
-              onChange={(e) => setTherapyMinutes(Math.max(0, Number.parseInt(e.target.value) || 0))}
-              className="w-full"
-              placeholder="0"
-            />
+            <Label>Therapy Time (excluded from work hours)</Label>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Label htmlFor="therapy-hours" className="text-xs text-muted-foreground">
+                  Hours
+                </Label>
+                <Input
+                  id="therapy-hours"
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={therapyHours}
+                  onChange={(e) => setTherapyHours(Math.max(0, Number.parseInt(e.target.value) || 0))}
+                  className="w-full"
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="therapy-minutes" className="text-xs text-muted-foreground">
+                  Minutes
+                </Label>
+                <Input
+                  id="therapy-minutes"
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={therapyMinutes}
+                  onChange={(e) => setTherapyMinutes(Math.max(0, Math.min(59, Number.parseInt(e.target.value) || 0)))}
+                  className="w-full"
+                  placeholder="0"
+                />
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">
+              {totalTherapyMinutes > 0 && `Total: ${totalTherapyMinutes} minutes | `}
               Therapy time is excluded from total working hours for break calculations
             </p>
           </div>
