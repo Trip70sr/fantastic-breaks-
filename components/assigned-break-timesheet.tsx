@@ -70,6 +70,47 @@ function calculateShiftHours(start: string, end: string): number {
   return (endMinutes - startMinutes) / 60
 }
 
+function isBreakOverdue(entry: BreakEntry | undefined, schedule: ShiftScheduleEntry | undefined): boolean {
+  // Check if we have a shift schedule
+  if (schedule) {
+    const shiftHours = schedule.netWorkMinutes / 60
+
+    // If worked 4+ hours, require at least 1 break
+    if (shiftHours >= 4) {
+      // Count breaks taken from entry
+      let breaksTaken = 0
+      if (entry) {
+        if (entry.break1Start && entry.break1End) breaksTaken++
+        if (entry.break2Start && entry.break2End) breaksTaken++
+      }
+
+      // No breaks taken after 4 hours = overdue
+      if (breaksTaken === 0) return true
+
+      // If worked 6.5+ hours, should have 2 breaks
+      if (shiftHours >= 6.5 && breaksTaken < 2) return true
+    }
+
+    return false
+  }
+
+  // Check from entry data
+  if (!entry) return false
+
+  const shiftHours = calculateShiftHours(entry.shiftStart, entry.shiftEnd)
+
+  // Count breaks taken
+  let breaksTaken = 0
+  if (entry.break1Start && entry.break1End) breaksTaken++
+  if (entry.break2Start && entry.break2End) breaksTaken++
+
+  // Check compliance
+  if (shiftHours >= 4 && breaksTaken === 0) return true
+  if (shiftHours >= 6.5 && breaksTaken < 2) return true
+
+  return false
+}
+
 export default function AssignedBreakTimesheet({
   employees,
   assignedIds,
@@ -121,6 +162,8 @@ export default function AssignedBreakTimesheet({
 
               const { breaksTaken, requiredBreaks, status, shiftHours } = getBreakStatus(entry, schedule)
 
+              const breakOverdue = isBreakOverdue(entry, schedule)
+
               const statusConfig = {
                 complete: { color: "bg-green-50 border-green-200", icon: CheckCircle, iconColor: "text-green-600" },
                 partial: { color: "bg-yellow-50 border-yellow-200", icon: AlertTriangle, iconColor: "text-yellow-600" },
@@ -144,7 +187,7 @@ export default function AssignedBreakTimesheet({
                   <div className="flex items-center gap-3">
                     <StatusIcon className={`h-5 w-5 ${statusConfig.iconColor}`} />
                     <div>
-                      <div className="font-semibold">{emp.name}</div>
+                      <div className={`font-semibold ${breakOverdue ? "text-red-600" : ""}`}>{emp.name}</div>
                       <div className="text-sm text-muted-foreground">{emp.department}</div>
                     </div>
                   </div>
