@@ -176,3 +176,19 @@ export function isDirector(): boolean {
   const session = getAdminSession()
   return session?.role === "director" || session?.role === "super_admin"
 }
+
+export function canManageEmployees(): boolean {
+  const session = getAdminSession()
+  if (!session) return false
+
+  const permissions = getPermissions(session.role as AdminRole)
+  return permissions.editEmployees
+}
+
+export function isManagementRole(): boolean {
+  const session = getAdminSession()
+  if (!session) return false
+
+  const managementRoles: AdminRole[] = ["manager", "hr_admin", "super_admin", "director"]
+  return managementRoles.includes(session.role as AdminRole)
+}

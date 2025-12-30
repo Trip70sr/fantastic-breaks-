@@ -30,6 +30,7 @@ import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
 import { getShiftSchedules, saveShiftSchedule } from "@/lib/shift-storage"
 import { saveShiftVerification, getVerificationForEmployee } from "@/lib/shift-verification-storage"
 import ShiftVerificationBlock from "./shift-verification-block"
+import { validateBreakAssignment, type BreakType } from "@/lib/break-validation"
 
 export default function EmployeeBreakDashboard() {
   const analytics = useAnalytics()
@@ -123,6 +124,30 @@ export default function EmployeeBreakDashboard() {
   }
 
   const handleAddBreakEntry = (entry: BreakEntry) => {
+    console.log("[v0] Adding break entry:", entry)
+
+    const dateStr = format(selectedDate, "yyyy-MM-dd")
+
+    // Determine which break is being added
+    let breakType: BreakType | null = null
+    if (entry.break1Start && entry.break1End) {
+      breakType = "FIRST"
+    } else if (entry.break2Start && entry.break2End) {
+      breakType = "SECOND"
+    }
+
+    // If a break is being added, validate it
+    if (breakType) {
+      const shiftSchedule = shiftSchedules.find((s) => s.employeeId === entry.employeeId && s.date === dateStr)
+
+      const validation = validateBreakAssignment(entry.employeeId, dateStr, breakType, breakEntries, shiftSchedule)
+
+      if (!validation.valid) {
+        alert(validation.message)
+        return
+      }
+    }
+
     setBreakEntries([...breakEntries, { ...entry, id: Date.now().toString() }])
     analytics.trackBreak("Add Break Entry", entry.break1Start ? "Break 1" : "Shift Only")
   }

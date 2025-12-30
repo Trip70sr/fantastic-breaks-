@@ -2,15 +2,35 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  // Handle shared access routes
-  if (request.nextUrl.pathname.startsWith("/shared/")) {
-    // In a real implementation, you would:
-    // 1. Extract the token from the URL
-    // 2. Validate it against your database
-    // 3. Check if it's expired or revoked
-    // 4. Set appropriate headers or redirect if invalid
+  const pathname = request.nextUrl.pathname
 
-    // For now, we'll just allow the request to proceed
+  // Check if accessing employee management routes
+  if (pathname.startsWith("/api/employees") || pathname.startsWith("/management")) {
+    // In production, this would verify JWT token and check role
+    // For now, we check localStorage-based session via headers
+    const sessionHeader = request.headers.get("x-admin-session")
+
+    if (!sessionHeader) {
+      return NextResponse.redirect(new URL("/", request.url))
+    }
+
+    try {
+      const session = JSON.parse(sessionHeader)
+
+      // Only managers, hr_admin, super_admin, and director can access
+      const allowedRoles = ["manager", "hr_admin", "super_admin", "director"]
+
+      if (!allowedRoles.includes(session.role)) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url))
+      }
+    } catch {
+      return NextResponse.redirect(new URL("/", request.url))
+    }
+  }
+
+  // Handle shared access routes
+  if (pathname.startsWith("/shared/")) {
+    // Allow shared routes to proceed
     return NextResponse.next()
   }
 
@@ -18,5 +38,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/shared/:path*"],
+  matcher: ["/shared/:path*", "/api/employees/:path*", "/management/:path*"],
 }

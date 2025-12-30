@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import type { Employee, BreakEntry, Department } from "@/lib/types"
 import { Edit, Trash2, Plus, Users } from "lucide-react"
+import { canManageEmployees } from "@/lib/admin-auth"
 
 interface EmployeeManagementProps {
   isOpen: boolean
@@ -34,6 +35,7 @@ export default function EmployeeManagement({
   onAddBreakEntry,
   onUpdateBreakEntry,
 }: EmployeeManagementProps) {
+  const [canManage, setCanManage] = useState(false)
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false)
@@ -45,12 +47,23 @@ export default function EmployeeManagement({
     department: "RBT" as Department,
   })
 
+  useEffect(() => {
+    setCanManage(canManageEmployees())
+  }, [])
+
   const handleAddEmployee = () => {
+    if (!canManage) {
+      alert("You do not have permission to add employees. Only management can perform this action.")
+      return
+    }
+
     if (newEmployee.name.trim()) {
       onAddEmployee({
         id: Date.now().toString(),
         name: newEmployee.name.trim(),
         department: newEmployee.department,
+        active: true,
+        hourlyRate: 0,
       })
       setNewEmployee({ name: "", department: "RBT" })
       setIsAddEmployeeOpen(false)
@@ -63,6 +76,11 @@ export default function EmployeeManagement({
   }
 
   const handleUpdateEmployee = () => {
+    if (!canManage) {
+      alert("You do not have permission to edit employees. Only management can perform this action.")
+      return
+    }
+
     if (editingEmployee && editingEmployee.name.trim()) {
       onUpdateEmployee(editingEmployee)
       setEditingEmployee(null)
@@ -76,6 +94,11 @@ export default function EmployeeManagement({
   }
 
   const handleConfirmDelete = () => {
+    if (!canManage) {
+      alert("You do not have permission to delete employees. Only management can perform this action.")
+      return
+    }
+
     if (employeeToDelete) {
       onDeleteEmployee(employeeToDelete)
       setEmployeeToDelete(null)
@@ -115,8 +138,17 @@ export default function EmployeeManagement({
             <div>
               <h3 className="text-lg font-semibold">Employees ({employees.length})</h3>
               <p className="text-sm text-gray-600">Manage your team members and their departments</p>
+              {!canManage && (
+                <p className="text-sm text-red-600 mt-1">
+                  View-only mode. Only management can add/edit/delete employees.
+                </p>
+              )}
             </div>
-            <Button onClick={() => setIsAddEmployeeOpen(true)} className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsAddEmployeeOpen(true)}
+              className="flex items-center gap-2"
+              disabled={!canManage}
+            >
               <Plus className="h-4 w-4" />
               Add Employee
             </Button>
@@ -148,10 +180,20 @@ export default function EmployeeManagement({
                       <TableCell>{stats.coverageProvided}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditEmployee(employee)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditEmployee(employee)}
+                            disabled={!canManage}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(employee.id)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(employee.id)}
+                            disabled={!canManage}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -215,7 +257,9 @@ export default function EmployeeManagement({
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleAddEmployee}>Add Employee</Button>
+            <Button onClick={handleAddEmployee} disabled={!canManage}>
+              Add Employee
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -260,7 +304,9 @@ export default function EmployeeManagement({
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleUpdateEmployee}>Save Changes</Button>
+            <Button onClick={handleUpdateEmployee} disabled={!canManage}>
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -279,7 +325,7 @@ export default function EmployeeManagement({
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={!canManage}>
               Delete Employee
             </Button>
           </DialogFooter>
