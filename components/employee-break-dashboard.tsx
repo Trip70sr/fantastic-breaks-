@@ -1,105 +1,47 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useMemo, useCallback, useEffect } from "react"
-import { format } from "date-fns"
-import { Calendar, Download, Database, CalendarIcon, Mail, XCircle, AlertTriangle, CheckCircle } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { toast } from "sonner"
-import type { Employee, BreakEntry, Department, ShiftScheduleEntry, ShiftVerification } from "@/lib/types"
-import { useEmployees, useBreakEntries } from "@/hooks/use-data"
-import { getShiftSchedules, saveShiftSchedule } from "@/lib/shift-storage"
-import { getBreakAssignments, saveBreakAssignments } from "@/lib/break-assignments"
-import { getWorkingToday } from "@/lib/working-today"
-import AssignBreaksButton from "@/components/assign-breaks-button"
-import AssignedBreakTimesheet from "@/components/assigned-break-timesheet"
-import WorkingTodayList from "@/components/working-today-list"
-import ShiftVerificationBlock from "@/components/shift-verification-block"
-import { getVerificationForEmployee, saveShiftVerification } from "@/lib/shift-verification-storage" // FIXED IMPORT PATH
-import { useAnalytics } from "@/hooks/use-analytics"
-import dynamic from "next/dynamic"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar } from "@/components/ui/calendar"
+import BreakTimesheetTable from "@/components/break-timesheet-table"
 import EmployeeManagement from "@/components/employee-management"
 import DataBackupRestore from "@/components/data-backup-restore"
 import ManagementAccess from "@/components/management-access"
+import type { Employee, BreakEntry, Department, ShiftScheduleEntry, ShiftVerification } from "@/lib/types"
+import { initialEmployees } from "@/lib/data"
 import { exportToCSV, calculateShiftHours, formatShiftHours, formatTime } from "@/lib/utils"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Download, Database, CheckCircle, XCircle, AlertTriangle, Mail } from "lucide-react"
+import { format } from "date-fns"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Skeleton } from "@/components/ui/skeleton"
-import { checkBreakDuplicate } from "@/lib/break-validation"
-
-const EmailSharing = dynamic(() => import("@/components/email-sharing"), {
-  loading: () => <div className="text-center py-8">Loading...</div>,
-})
-
-// Define Props interfaces for components that were previously missing their definitions
-interface WorkingEmployeesTableProps {
-  detailedEmployees: Array<{
-    employee: Employee
-    entry: BreakEntry
-    shiftHours: number
-    hasBreak1: boolean
-    hasBreak2: boolean
-    isEligibleForBreak2: boolean
-    hasCoverage1: boolean
-    hasCoverage2: boolean
-    breakStatus: string
-    coverageStatus: string
-    coverageEmployee1: Employee | null
-    coverageEmployee2: Employee | null
-  }>
-  onQuickAddBreak: (employeeId: string, breakType: "break1" | "break2") => void
-}
-
-interface BreakEntryFormProps {
-  employees: Employee[]
-  workingEmployees: Employee[]
-  onAddEntry: (entry: Omit<BreakEntry, "id" | "employeeName">) => void
-  selectedDate: Date
-  shiftSchedules: ShiftScheduleEntry[]
-}
+import { Badge } from "@/components/ui/badge"
+import EmailSharing from "@/components/email-sharing"
+import AssignBreaksButton from "@/components/assign-breaks-button"
+import AssignedBreakTimesheet from "@/components/assigned-break-timesheet"
+import { getAssignmentForDate, setAssignmentForDate } from "@/lib/break-assignments"
+import { getWorkingToday } from "@/lib/working-today"
+import { useAnalytics, usePageAnalytics } from "@/hooks/use-analytics"
+import { getShiftSchedules, saveShiftSchedule } from "@/lib/shift-storage"
+import { saveShiftVerification, getVerificationForEmployee } from "@/lib/shift-verification-storage"
+import ShiftVerificationBlock from "./shift-verification-block"
 
 export default function EmployeeBreakDashboard() {
-  console.log("[v0] Dashboard rendering")
-
   const analytics = useAnalytics()
-  // usePageAnalytics("Employee Break Dashboard") // This hook seems to be missing in updates
+  usePageAnalytics("Employee Break Dashboard")
 
-  const { employees, isLoading: employeesLoading, addEmployee, updateEmployee, deleteEmployee } = useEmployees()
-  const {
-    breakEntries,
-    isLoading: entriesLoading,
-    addBreakEntry,
-    updateBreakEntry,
-    deleteBreakEntry,
-  } = useBreakEntries()
-
-  console.log("[v0] Loading states:", {
-    employeesLoading,
-    entriesLoading,
-    employeesCount: employees.length,
-    entriesCount: breakEntries.length,
-  })
-
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"))
-  const [selectedEmployee, setSelectedEmployee] = useState<string>("")
-  const [coverageEmployee, setCoverageEmployee] = useState<string>("")
-  const [break1Start, setBreak1Start] = useState("")
-  const [break1End, setBreak1End] = useState("")
-  const [break2Start, setBreak2Start] = useState("")
-  const [break2End, setBreak2End] = useState("")
-  const [shiftStart, setShiftStart] = useState("")
-  const [shiftEnd, setShiftEnd] = useState("")
-  const [filterEmployee, setFilterEmployee] = useState<string>("all") // This was in existing, removed in updates for tabs
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
+  const [shiftSchedules, setShiftSchedules] = useState<ShiftScheduleEntry[]>([])
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [filterEmployee, setFilterEmployee] = useState<string>("all")
   const [filterBreakStatus, setFilterBreakStatus] = useState<string>("all")
-  const [filterDepartment, setFilterDepartment] = useState<Department | "all">("all") // This was in existing, updated for tabs
+  const [filterDepartment, setFilterDepartment] = useState<Department | "all">("RBT")
   const [isEmployeeManagementOpen, setIsEmployeeManagementOpen] = useState(false)
   const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false)
   const [managementFilters, setManagementFilters] = useState({
@@ -110,135 +52,113 @@ export default function EmployeeBreakDashboard() {
   })
   const [isEmailSharingOpen, setIsEmailSharingOpen] = useState(false)
   const [assignedEmployeeIds, setAssignedEmployeeIds] = useState<string[]>([])
-  const [shiftSchedules, setShiftSchedules] = useState<ShiftScheduleEntry[]>([]) // This was in existing, kept in updates
-  const [scheduleVerified, setScheduleVerified] = useState(false)
-  const [scheduleCorrected, setScheduleCorrected] = useState(false)
-  const [correctionReason, setCorrectionReason] = useState("")
+
+  // Load employees from localStorage or use initial data
+  useEffect(() => {
+    const savedEmployees = localStorage.getItem("employees")
+    if (savedEmployees) {
+      setEmployees(JSON.parse(savedEmployees))
+    } else {
+      setEmployees(initialEmployees)
+      localStorage.setItem("employees", JSON.stringify(initialEmployees))
+    }
+
+    const savedBreakEntries = localStorage.getItem("breakEntries")
+    if (savedBreakEntries) {
+      setBreakEntries(JSON.parse(savedBreakEntries))
+    }
+
+    setShiftSchedules(getShiftSchedules())
+  }, [])
+
+  // Save break entries to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("breakEntries", JSON.stringify(breakEntries))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
+  }, [breakEntries])
+
+  // Save employees to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("employees", JSON.stringify(employees))
+    localStorage.setItem("lastDataUpdate", new Date().toISOString())
+  }, [employees])
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const assignments = getBreakAssignments(selectedDate)
-      const schedules = getShiftSchedules()
-      setAssignedEmployeeIds(assignments.employeeIds)
-      setShiftSchedules(schedules)
-      console.log("[v0] Loaded assignments:", assignments.employeeIds.length)
-    }
+    const dateString = selectedDate.toISOString().split("T")[0]
+    const assignment = getAssignmentForDate(dateString)
+    setAssignedEmployeeIds(assignment?.employeeIds || [])
   }, [selectedDate])
 
-  // Handle save shift schedule (kept from existing code)
-  const handleSaveShiftSchedule = useCallback(
-    (schedule: ShiftScheduleEntry) => {
-      saveShiftSchedule(schedule)
-      setShiftSchedules(getShiftSchedules())
+  const handleSaveShiftSchedule = (schedule: ShiftScheduleEntry) => {
+    saveShiftSchedule(schedule)
+    setShiftSchedules(getShiftSchedules())
 
-      // Track analytics
-      analytics.trackBreak("Self-Reported Shift", `${schedule.netWorkMinutes / 60}h net work`)
-      toast.success("Shift schedule saved")
-    },
-    [analytics],
-  )
+    // Track analytics
+    analytics.trackBreak("Self-Reported Shift", `${schedule.netWorkMinutes / 60}h net work`)
+  }
 
-  // Handle export CSV (kept from existing code)
   const handleExportCSV = () => {
-    const formattedDate = format(new Date(selectedDate), "yyyy-MM-dd")
-    // Assuming filteredBreakEntries is accessible or needs to be recalculated based on new filters
-    const currentFilteredEntries = breakEntries.filter((entry) => entry.date.split("T")[0] === selectedDate) // Simplified filter
-    exportToCSV(currentFilteredEntries, employees, `employee-breaks-${formattedDate}`)
+    const formattedDate = format(selectedDate, "yyyy-MM-dd")
+    exportToCSV(filteredBreakEntries, employees, `employee-breaks-${formattedDate}`)
 
     // Track the export action
-    analytics.trackExport("CSV Export", currentFilteredEntries.length)
+    analytics.trackExport("CSV Export", filteredBreakEntries.length)
   }
 
-  // Handle add employee (kept from existing code)
   const handleAddEmployee = (employee: Employee) => {
-    addEmployee({ ...employee, id: Date.now().toString() }) // Assuming addEmployee from SWR hook
+    setEmployees([...employees, { ...employee, id: Date.now().toString() }])
     analytics.trackEmployee("Add Employee", employee.name)
-    toast.success(`Employee ${employee.name} added`)
   }
 
-  // Handle update employee (kept from existing code)
   const handleUpdateEmployee = (updatedEmployee: Employee) => {
-    updateEmployee(updatedEmployee) // Assuming updateEmployee from SWR hook
+    setEmployees(employees.map((employee) => (employee.id === updatedEmployee.id ? updatedEmployee : employee)))
     analytics.trackEmployee("Update Employee", updatedEmployee.name)
-    toast.success(`Employee ${updatedEmployee.name} updated`)
   }
 
-  // Handle delete employee (kept from existing code)
   const handleDeleteEmployee = (id: string) => {
     const employee = employees.find((e) => e.id === id)
-    deleteEmployee(id) // Assuming deleteEmployee from SWR hook
-    // Also need to filter out breaks associated with deleted employee
-    const remainingBreakEntries = breakEntries.filter(
-      (entry) => entry.employeeId !== id && entry.coverageEmployee !== id,
-    )
-    // Assuming an updateBreakEntries function or similar mechanism if breakEntries are mutable from SWR
-    // For now, we'll rely on SWR's cache invalidation if deleteEmployee triggers it.
+    setEmployees(employees.filter((employee) => employee.id !== id))
+    setBreakEntries(breakEntries.filter((entry) => entry.employeeId !== id && entry.coverageEmployeeId !== id))
     analytics.trackEmployee("Delete Employee", employee?.name)
-    toast.success(`Employee ${employee?.name} deleted`)
   }
 
-  // Handle add break entry (kept from existing code, modified for useCallback)
-  const handleAddBreakEntry = useCallback(
-    (entry: BreakEntry) => {
-      addBreakEntry({ ...entry, id: Date.now().toString() }) // Assuming addBreakEntry from SWR hook
-      analytics.trackBreak("Add Break Entry", entry.break1Start ? "Break 1" : "Shift Only")
-      toast.success("Break entry added")
-    },
-    [addBreakEntry, analytics],
-  )
+  const handleAddBreakEntry = (entry: BreakEntry) => {
+    setBreakEntries([...breakEntries, { ...entry, id: Date.now().toString() }])
+    analytics.trackBreak("Add Break Entry", entry.break1Start ? "Break 1" : "Shift Only")
+  }
 
-  // Handle update break entry (kept from existing code, modified for useCallback)
-  const handleUpdateBreakEntry = useCallback(
-    (updatedEntry: BreakEntry) => {
-      updateBreakEntry(updatedEntry) // Assuming updateBreakEntry from SWR hook
-      analytics.trackBreak("Update Break Entry")
-      toast.success("Break entry updated")
-    },
-    [updateBreakEntry, analytics],
-  )
+  const handleUpdateBreakEntry = (updatedEntry: BreakEntry) => {
+    setBreakEntries(breakEntries.map((entry) => (entry.id === updatedEntry.id ? updatedEntry : entry)))
+    analytics.trackBreak("Update Break Entry")
+  }
 
-  // Handle delete break entry (kept from existing code, modified for useCallback)
-  const handleDeleteBreakEntry = useCallback(
-    (id: string) => {
-      deleteBreakEntry(id) // Assuming deleteBreakEntry from SWR hook
-      analytics.trackBreak("Delete Break Entry")
-      toast.success("Break entry deleted")
-    },
-    [deleteBreakEntry],
-  )
+  const handleDeleteBreakEntry = (id: string) => {
+    setBreakEntries(breakEntries.filter((entry) => entry.id !== id))
+    analytics.trackBreak("Delete Break Entry")
+  }
 
-  // Handle restore data (kept from existing code)
   const handleRestoreData = (restoredEmployees: Employee[], restoredBreakEntries: BreakEntry[]) => {
-    // Assuming SWR hooks handle updates to employees and breakEntries
-    // We might need to revalidate or manually set the data if SWR doesn't automatically handle it.
-    // For now, we'll assume add/update/delete functions from SWR are used.
-    // Direct localStorage setting might be redundant or need careful integration.
+    setEmployees(restoredEmployees)
+    setBreakEntries(restoredBreakEntries)
+
+    // Update localStorage
     localStorage.setItem("employees", JSON.stringify(restoredEmployees))
     localStorage.setItem("breakEntries", JSON.stringify(restoredBreakEntries))
     localStorage.setItem("lastDataUpdate", new Date().toISOString())
 
-    // This part would ideally trigger SWR revalidation or manual data setting
-    // For simplicity, we'll log here. In a real app, trigger SWR mutation.
-    console.log("Data restored, but SWR state needs to be updated.")
     analytics.trackData("Restore Data", `${restoredEmployees.length} employees, ${restoredBreakEntries.length} entries`)
-    toast.success("Data restored")
   }
 
-  // Handle assign employees (modified for useCallback)
-  const handleAssignEmployees = useCallback(
-    (employeeIds: string[]) => {
-      setAssignedEmployeeIds(employeeIds)
-      saveBreakAssignments(selectedDate, employeeIds)
-      analytics.trackBreak("employees_assigned", `${employeeIds.length} on ${selectedDate}`)
-      toast.success(`Assigned ${employeeIds.length} employees for breaks`)
-    },
-    [selectedDate, analytics],
-  )
+  const handleAssignEmployees = (employeeIds: string[]) => {
+    const dateString = selectedDate.toISOString().split("T")[0]
+    setAssignmentForDate(dateString, employeeIds, "manager") // TODO: Get actual user role
+    setAssignedEmployeeIds(employeeIds)
+    analytics.trackBreak("assign", `${employeeIds.length} employees on ${dateString}`)
+  }
 
-  // Original getDetailedWorkingEmployees is kept for reference but might be refactored
   const getDetailedWorkingEmployees = () => {
-    const dateString = new Date(selectedDate).toISOString().split("T")[0]
-    const todayEntries = breakEntries.filter((entry) => entry.date.split("T")[0] === selectedDate)
+    const dateString = selectedDate.toISOString().split("T")[0]
+    const todayEntries = breakEntries.filter((entry) => new Date(entry.date).toISOString().split("T")[0] === dateString)
 
     return todayEntries
       .map((entry) => {
@@ -250,7 +170,7 @@ export default function EmployeeBreakDashboard() {
         const hasBreak2 = entry.break2Start && entry.break2End
         const isEligibleForBreak2 = shiftHours >= 6.5
         const hasCoverage1 = entry.coverageEmployeeId && entry.coverageEmployeeId !== "none"
-        const hasCoverage2 = entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none" // Assuming coverage2EmployeeId exists
+        const hasCoverage2 = entry.coverage2EmployeeId && entry.coverage2EmployeeId !== "none"
 
         const breakStatus = getBreakStatus(hasBreak1, hasBreak2, isEligibleForBreak2)
         const coverageStatus = getCoverageStatus(hasBreak1, hasBreak2, hasCoverage1, hasCoverage2)
@@ -280,7 +200,6 @@ export default function EmployeeBreakDashboard() {
       .filter(Boolean)
   }
 
-  // Original getBreakStatus is kept
   const getBreakStatus = (hasBreak1: boolean, hasBreak2: boolean, isEligibleForBreak2: boolean) => {
     if (!hasBreak1) return "no-breaks"
     if (isEligibleForBreak2 && !hasBreak2) return "partial-breaks"
@@ -288,7 +207,6 @@ export default function EmployeeBreakDashboard() {
     return "break1-only"
   }
 
-  // Original getCoverageStatus is kept
   const getCoverageStatus = (hasBreak1: boolean, hasBreak2: boolean, hasCoverage1: boolean, hasCoverage2: boolean) => {
     const needsCoverage1 = hasBreak1
     const needsCoverage2 = hasBreak2
@@ -303,51 +221,54 @@ export default function EmployeeBreakDashboard() {
     return getWorkingToday(employees, assignedEmployeeIds)
   }, [employees, assignedEmployeeIds])
 
-  // Memoized filteredBreakEntries using new date format
-  const filteredBreakEntries = useMemo(() => {
-    return breakEntries.filter((entry) => {
-      const entryDate = entry.date.split("T")[0]
-      const isSameDate = entryDate === selectedDate
+  const detailedWorkingEmployees = getDetailedWorkingEmployees()
 
-      const matchesEmployee = filterEmployee === "all" || entry.employeeId === filterEmployee
+  const filteredBreakEntries = breakEntries.filter((entry) => {
+    const entryDate = new Date(entry.date)
+    const isSameDate =
+      entryDate.getDate() === selectedDate.getDate() &&
+      entryDate.getMonth() === selectedDate.getMonth() &&
+      entryDate.getFullYear() === selectedDate.getFullYear()
 
-      const employee = employees.find((e) => e.id === entry.employeeId)
-      const matchesDepartment =
-        managementFilters.showAllDepartments ||
-        filterDepartment === "all" ||
-        (employee && employee.department === filterDepartment)
+    const matchesEmployee = filterEmployee === "all" || entry.employeeId === filterEmployee
 
-      const hasBreak = entry.break1Start && entry.break1End
-      const matchesBreakStatus =
-        filterBreakStatus === "all" ||
-        (filterBreakStatus === "given" && hasBreak) ||
-        (filterBreakStatus === "notGiven" && !hasBreak)
+    const employee = employees.find((e) => e.id === entry.employeeId)
+    const matchesDepartment =
+      managementFilters.showAllDepartments ||
+      filterDepartment === "all" ||
+      (employee && employee.department === filterDepartment)
 
-      // Apply management filters
-      if (managementFilters.showMissingBreaks && hasBreak) return false
-      if (managementFilters.showCoverageIssues) {
-        const hasCoverageIssue =
-          (entry.break1Start && entry.break1End && !entry.coverageEmployeeId) ||
-          (entry.break2Start && entry.break2End && !entry.coverage2EmployeeId)
-        if (!hasCoverageIssue) return false
-      }
+    const hasBreak = entry.break1Start && entry.break1End
+    const matchesBreakStatus =
+      filterBreakStatus === "all" ||
+      (filterBreakStatus === "given" && hasBreak) ||
+      (filterBreakStatus === "notGiven" && !hasBreak)
 
-      return isSameDate && matchesEmployee && matchesDepartment && matchesBreakStatus
-    })
-  }, [breakEntries, selectedDate, filterEmployee, filterDepartment, filterBreakStatus, employees, managementFilters])
-
-  // Quick add break logic (kept from existing code)
-  const handleQuickAddBreak = (employeeId: string, breakType: "break1" | "break2") => {
-    const entry = breakEntries.find((e) => e.employeeId === employeeId && e.date.split("T")[0] === selectedDate)
-
-    if (!entry) {
-      toast.error("Entry not found for this employee on this date.")
-      return
+    // Apply management filters
+    if (managementFilters.showMissingBreaks && hasBreak) return false
+    if (managementFilters.showCoverageIssues) {
+      const hasCoverageIssue =
+        (entry.break1Start && entry.break1End && !entry.coverageEmployeeId) ||
+        (entry.break2Start && entry.break2End && !entry.coverage2EmployeeId)
+      if (!hasCoverageIssue) return false
     }
+
+    return isSameDate && matchesEmployee && matchesDepartment && matchesBreakStatus
+  })
+
+  const handleQuickAddBreak = (employeeId: string, breakType: "break1" | "break2") => {
+    const entry = breakEntries.find(
+      (e) =>
+        e.employeeId === employeeId &&
+        new Date(e.date).toISOString().split("T")[0] === selectedDate.toISOString().split("T")[0],
+    )
+
+    if (!entry) return
 
     const updatedEntry = { ...entry }
 
     if (breakType === "break1") {
+      // Add a default 10-minute break 2 hours into the shift
       const shiftStartMinutes =
         Number.parseInt(entry.shiftStart.split(":")[0]) * 60 + Number.parseInt(entry.shiftStart.split(":")[1])
       const breakStartMinutes = shiftStartMinutes + 120 // 2 hours later
@@ -361,6 +282,7 @@ export default function EmployeeBreakDashboard() {
       updatedEntry.break1Start = `${breakStartHours.toString().padStart(2, "0")}:${breakStartMins.toString().padStart(2, "0")}`
       updatedEntry.break1End = `${breakEndHours.toString().padStart(2, "0")}:${breakEndMins.toString().padStart(2, "0")}`
     } else {
+      // Add second break 4 hours into the shift
       const shiftStartMinutes =
         Number.parseInt(entry.shiftStart.split(":")[0]) * 60 + Number.parseInt(entry.shiftStart.split(":")[1])
       const breakStartMinutes = shiftStartMinutes + 240 // 4 hours later
@@ -376,170 +298,10 @@ export default function EmployeeBreakDashboard() {
     }
 
     handleUpdateBreakEntry(updatedEntry)
-    toast.success(`Quick added ${breakType} for ${employees.find((e) => e.id === employeeId)?.name}`)
-  }
-
-  // New handleSubmitBreakEntry from updates
-  const handleSubmitBreakEntry = useCallback(() => {
-    console.log("[v0] Starting break entry submission")
-
-    if (!selectedEmployee) {
-      toast.error("Please select an employee")
-      return
-    }
-
-    if (!scheduleVerified && !scheduleCorrected) {
-      toast.error("Please verify or correct the schedule before submitting")
-      return
-    }
-
-    if (!shiftStart || !shiftEnd) {
-      toast.error("Please enter shift start and end times")
-      return
-    }
-
-    // Determine which break is being entered
-    let breakNumber: 1 | 2 | 3 = 1
-    if (break2Start && break2End) {
-      breakNumber = 2
-    } else if (break1Start && break1End) {
-      breakNumber = 1
-    }
-
-    // Check for duplicate breaks only if break times are provided
-    if ((break1Start && break1End) || (break2Start && break2End)) {
-      if (!coverageEmployee) {
-        toast.error("Coverage employee is required when entering break times")
-        return
-      }
-
-      const duplicateCheck = checkBreakDuplicate(
-        selectedEmployee,
-        selectedDate,
-        breakEntries,
-        shiftSchedules,
-        breakNumber,
-      )
-
-      if (duplicateCheck.isDuplicate) {
-        toast.error(duplicateCheck.message)
-        return
-      }
-
-      // Validate break times are within shift
-      const [shiftStartHour, shiftStartMin] = shiftStart.split(":").map(Number)
-      const [shiftEndHour, shiftEndMin] = shiftEnd.split(":").map(Number)
-      const shiftStartMinutes = shiftStartHour * 60 + shiftStartMin
-      let shiftEndMinutes = shiftEndHour * 60 + shiftEndMin
-      if (shiftEndMinutes < shiftStartMinutes) shiftEndMinutes += 24 * 60
-
-      if (break1Start && break1End) {
-        const [b1StartHour, b1StartMin] = break1Start.split(":").map(Number)
-        const [b1EndHour, b1EndMin] = break1End.split(":").map(Number)
-        const b1StartMinutes = b1StartHour * 60 + b1StartMin
-        let b1EndMinutes = b1EndHour * 60 + b1EndMin
-        if (b1EndMinutes < b1StartMinutes) b1EndMinutes += 24 * 60
-
-        if (b1StartMinutes < shiftStartMinutes || b1EndMinutes > shiftEndMinutes) {
-          toast.error("Break 1 times must be within shift hours")
-          return
-        }
-      }
-
-      if (break2Start && break2End) {
-        const [b2StartHour, b2StartMin] = break2Start.split(":").map(Number)
-        const [b2EndHour, b2EndMin] = break2End.split(":").map(Number)
-        const b2StartMinutes = b2StartHour * 60 + b2StartMin
-        let b2EndMinutes = b2EndHour * 60 + b2EndMin
-        if (b2EndMinutes < b2StartMinutes) b2EndMinutes += 24 * 60
-
-        if (b2StartMinutes < shiftStartMinutes || b2EndMinutes > shiftEndMinutes) {
-          toast.error("Break 2 times must be within shift hours")
-          return
-        }
-      }
-    }
-
-    const newEntry: BreakEntry = {
-      id: Date.now().toString(),
-      employeeId: selectedEmployee,
-      date: `${selectedDate}T00:00:00.000Z`, // Convert string date to ISO format with timezone
-      shiftStart,
-      shiftEnd,
-      break1Start: break1Start || undefined,
-      break1End: break1End || undefined,
-      break2Start: break2Start || undefined,
-      break2End: break2End || undefined,
-      // Removed break3Start and break3End
-      coverageEmployee: coverageEmployee || undefined, // Renamed from coverageEmployeeId in existing code
-      // coverage2EmployeeId: coverage2EmployeeId || undefined, // This was in existing, removed in updates
-      scheduleVerified,
-      scheduleCorrected,
-      correctionReason: scheduleCorrected ? correctionReason : undefined,
-      // outsideTherapyStart, // These were in existing, removed in updates
-      // outsideTherapyEnd,
-      // outsideTherapyReason,
-    }
-
-    addBreakEntry(newEntry)
-    analytics.trackBreak("break_entry_added", `${selectedDate}`)
-
-    toast.success("Break entry added successfully")
-
-    // Reset form
-    setSelectedEmployee("")
-    setCoverageEmployee("")
-    setBreak1Start("")
-    setBreak1End("")
-    setBreak2Start("")
-    setBreak2End("")
-    // Removed break3 reset
-    setShiftStart("")
-    setShiftEnd("")
-    setScheduleVerified(false)
-    setScheduleCorrected(false)
-    setCorrectionReason("")
-  }, [
-    selectedEmployee,
-    scheduleVerified,
-    scheduleCorrected,
-    shiftStart,
-    shiftEnd,
-    break1Start,
-    break1End,
-    break2Start,
-    break2End,
-    // Removed break3 fields from reset
-    coverageEmployee,
-    correctionReason,
-    selectedDate,
-    employees,
-    breakEntries, // Include breakEntries for checkBreakDuplicate
-    shiftSchedules, // Include shiftSchedules for checkBreakDuplicate
-    addBreakEntry,
-    analytics,
-  ])
-
-  if (employeesLoading && employees.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-        </div>
-        <Skeleton className="h-96" />
-      </div>
-    )
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Employee Break Management</h2>
         <div className="flex flex-wrap gap-2">
@@ -569,7 +331,6 @@ export default function EmployeeBreakDashboard() {
         </div>
       </div>
 
-      {/* Filters Card - kept from existing code */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <Card className="lg:col-span-1">
           <CardHeader>
@@ -582,14 +343,14 @@ export default function EmployeeBreakDashboard() {
                 <PopoverTrigger asChild>
                   <Button id="date" variant={"outline"} className="w-full justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(new Date(selectedDate), "PPP")}
+                    {format(selectedDate, "PPP")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={new Date(selectedDate)}
-                    onSelect={(date) => date && setSelectedDate(format(date, "yyyy-MM-dd"))}
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
                     initialFocus
                   />
                 </PopoverContent>
@@ -661,8 +422,11 @@ export default function EmployeeBreakDashboard() {
                 <div className="text-xs text-gray-600 max-h-32 overflow-y-auto">
                   {workingEmployees
                     .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((emp) => (
-                      <div key={emp.id}>{emp.name}</div>
+                    .map((emp, index) => (
+                      <div key={emp.id}>
+                        {emp.name}
+                        {index < workingEmployees.length - 1 ? ", " : ""}
+                      </div>
                     ))}
                 </div>
               </div>
@@ -670,7 +434,6 @@ export default function EmployeeBreakDashboard() {
           </CardContent>
         </Card>
 
-        {/* Management Access - kept from existing code */}
         <ManagementAccess
           employees={employees}
           breakEntries={breakEntries}
@@ -678,191 +441,74 @@ export default function EmployeeBreakDashboard() {
           onFilterChange={setManagementFilters}
         />
 
-        {/* Main content card with tabs - updated structure */}
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Employee Break Dashboard</CardTitle>
-            <CardDescription>Manage and track employee breaks</CardDescription>
+            <CardTitle>Break Timesheet</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="timesheet" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="timesheet">Break Timesheet</TabsTrigger>
+            <AssignBreaksButton
+              employees={employees.filter(
+                (e) =>
+                  managementFilters.showAllDepartments ||
+                  filterDepartment === "all" ||
+                  e.department === filterDepartment,
+              )}
+              assignedIds={assignedEmployeeIds}
+              onAssign={handleAssignEmployees}
+              date={selectedDate.toISOString().split("T")[0]}
+            />
+
+            <AssignedBreakTimesheet
+              employees={employees}
+              assignedIds={assignedEmployeeIds}
+              breakEntries={breakEntries}
+              shiftSchedules={shiftSchedules}
+              date={selectedDate.toISOString().split("T")[0]}
+              onStartBreak={handleQuickAddBreak}
+              onSaveShiftSchedule={handleSaveShiftSchedule}
+            />
+
+            <Tabs defaultValue="timesheet" className="w-full mt-6">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="timesheet">Timesheet</TabsTrigger>
                 <TabsTrigger value="working">Working Today</TabsTrigger>
-                <TabsTrigger value="add-entry">Add Entry</TabsTrigger>
+                <TabsTrigger value="add">Add Entry</TabsTrigger>
               </TabsList>
-
-              <TabsContent value="timesheet">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Assigned Break Timesheet</CardTitle>
-                    <CardDescription>Track breaks for assigned employees</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <AssignBreaksButton
-                      employees={employees.filter(
-                        (e) =>
-                          managementFilters.showAllDepartments ||
-                          filterDepartment === "all" ||
-                          e.department === filterDepartment,
-                      )}
-                      onAssign={handleAssignEmployees}
-                      assignedIds={assignedEmployeeIds}
-                    />
-                    <AssignedBreakTimesheet
-                      employees={employees}
-                      assignedIds={assignedEmployeeIds}
-                      breakEntries={filteredBreakEntries}
-                      shiftSchedules={shiftSchedules}
-                      selectedDate={selectedDate}
-                      onSaveShiftSchedule={handleSaveShiftSchedule}
-                    />
-                  </CardContent>
-                </Card>
+              <TabsContent value="timesheet" className="mt-4">
+                <BreakTimesheetTable
+                  breakEntries={filteredBreakEntries}
+                  employees={employees}
+                  workingEmployees={workingEmployees}
+                  onUpdateEntry={handleUpdateBreakEntry}
+                  onDeleteEntry={handleDeleteBreakEntry}
+                />
               </TabsContent>
-
-              <TabsContent value="working">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Working Today</CardTitle>
-                    <CardDescription>Employees assigned for {selectedDate}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <WorkingTodayList employees={workingEmployees} />
-                  </CardContent>
-                </Card>
+              <TabsContent value="working" className="mt-4">
+                <WorkingEmployeesTable
+                  detailedEmployees={detailedWorkingEmployees}
+                  onQuickAddBreak={handleQuickAddBreak}
+                />
               </TabsContent>
-
-              <TabsContent value="add-entry">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Add Break Entry</CardTitle>
-                    <CardDescription>Record employee breaks and schedules</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Employee *</Label>
-                        <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select employee" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {workingEmployees.map((emp) => (
-                              <SelectItem key={emp.id} value={emp.id}>
-                                {emp.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {workingEmployees.length === 0 && (
-                          <p className="text-xs text-amber-600">
-                            No employees assigned. Use "Assign Employees for Breaks" first.
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <Label>Coverage Employee *</Label>
-                        <Select value={coverageEmployee} onValueChange={setCoverageEmployee}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select coverage" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {workingEmployees
-                              .filter((e) => e.id !== selectedEmployee)
-                              .map((emp) => (
-                                <SelectItem key={emp.id} value={emp.id}>
-                                  {emp.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Shift Start Time *</Label>
-                        <Input
-                          type="time"
-                          value={shiftStart}
-                          onChange={(e) => setShiftStart(e.target.value)}
-                          readOnly={!scheduleCorrected}
-                        />
-                      </div>
-                      <div>
-                        <Label>Shift End Time *</Label>
-                        <Input
-                          type="time"
-                          value={shiftEnd}
-                          onChange={(e) => setShiftEnd(e.target.value)}
-                          readOnly={!scheduleCorrected}
-                        />
-                      </div>
-                    </div>
-
-                    <ShiftVerificationBlock
-                      verified={scheduleVerified}
-                      corrected={scheduleCorrected}
-                      onVerify={() => {
-                        setScheduleVerified(!scheduleVerified)
-                        setScheduleCorrected(false)
-                        setCorrectionReason("")
-                      }}
-                      onCorrect={() => {
-                        setScheduleCorrected(!scheduleCorrected)
-                        setScheduleVerified(false)
-                      }}
-                      correctionReason={correctionReason}
-                      onReasonChange={setCorrectionReason}
-                    />
-
-                    <Separator />
-
-                    <div className="space-y-4">
-                      <h3 className="font-semibold">Break Times</h3>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Break 1 Start</Label>
-                          <Input type="time" value={break1Start} onChange={(e) => setBreak1Start(e.target.value)} />
-                        </div>
-                        <div>
-                          <Label>Break 1 End</Label>
-                          <Input type="time" value={break1End} onChange={(e) => setBreak1End(e.target.value)} />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Break 2 Start</Label>
-                          <Input type="time" value={break2Start} onChange={(e) => setBreak2Start(e.target.value)} />
-                        </div>
-                        <div>
-                          <Label>Break 2 End</Label>
-                          <Input type="time" value={break2End} onChange={(e) => setBreak2End(e.target.value)} />
-                        </div>
-                      </div>
-
-                      {/* Removed Break 3 section */}
-                    </div>
-
-                    <Button onClick={handleSubmitBreakEntry} className="w-full">
-                      Submit Break Entry
-                    </Button>
-                  </CardContent>
-                </Card>
+              <TabsContent value="add" className="mt-4">
+                <BreakEntryForm
+                  employees={employees.filter(
+                    (e) =>
+                      managementFilters.showAllDepartments ||
+                      filterDepartment === "all" ||
+                      e.department === filterDepartment,
+                  )}
+                  workingEmployees={workingEmployees}
+                  onAddEntry={(entry) => handleAddBreakEntry({ ...entry, date: selectedDate.toISOString() })}
+                  selectedDate={selectedDate}
+                  shiftSchedules={shiftSchedules}
+                />
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
       </div>
 
-      {/* Modals - kept from existing code, but rendering logic might need adjustment for dynamic imports */}
+      {/* Updated modal rendering to ensure they are rendered conditionally */}
       {isEmailSharingOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="max-w-2xl w-full">
@@ -895,9 +541,12 @@ export default function EmployeeBreakDashboard() {
   )
 }
 
-// Working Employees Table Component (kept from existing code, but the tabs structure implies this might be replaced or refactored)
-// The 'WorkingTodayList' component from the updates seems to be the replacement for this.
-// Keeping it here for now in case it's still needed elsewhere or for comparison.
+// Working Employees Table Component
+interface WorkingEmployeesTableProps {
+  detailedEmployees: any[]
+  onQuickAddBreak: (employeeId: string, breakType: "break1" | "break2") => void
+}
+
 function WorkingEmployeesTable({ detailedEmployees, onQuickAddBreak }: WorkingEmployeesTableProps) {
   const [filterDepartment, setFilterDepartment] = useState<Department | "all">("all")
   const [filterBreakStatus, setFilterBreakStatus] = useState<string>("all")
@@ -1110,9 +759,15 @@ function WorkingEmployeesTable({ detailedEmployees, onQuickAddBreak }: WorkingEm
   )
 }
 
-// Break Entry Form Component (kept from existing code, but the tabs structure implies this might be replaced or refactored)
-// The "Add Entry" tab in the main component seems to be the replacement for this form.
-// Keeping it here for now in case it's still needed elsewhere or for comparison.
+// Break Entry Form Component
+interface BreakEntryFormProps {
+  employees: Employee[]
+  workingEmployees: Employee[]
+  onAddEntry: (entry: Omit<BreakEntry, "id">) => void
+  selectedDate: Date
+  shiftSchedules: ShiftScheduleEntry[]
+}
+
 function BreakEntryForm({
   employees,
   workingEmployees,
@@ -1230,58 +885,6 @@ function BreakEntryForm({
       return
     }
 
-    const isEnteringBreak = break1Start || break1End || break2Start || break2End
-    // Removed break3 check
-
-    if (isEnteringBreak) {
-      if (!coverageEmployeeId) {
-        alert("Coverage Employee is required when entering break times.")
-        return
-      }
-
-      if (break1Start && !break1End) {
-        alert("Break 1 End Time is required when Break 1 Start Time is entered.")
-        return
-      }
-
-      if (break1End && !break1Start) {
-        alert("Break 1 Start Time is required when Break 1 End Time is entered.")
-        return
-      }
-
-      if (break2Start && !break2End) {
-        alert("Break 2 End Time is required when Break 2 Start Time is entered.")
-        return
-      }
-
-      if (break2End && !break2Start) {
-        alert("Break 2 Start Time is required when Break 2 End Time is entered.")
-        return
-      }
-      // Removed break3 validation
-
-      if (break1Start && shiftStart && break1Start < shiftStart) {
-        alert("Break 1 Start Time cannot be before Shift Start Time.")
-        return
-      }
-
-      if (break1End && shiftEnd && break1End > shiftEnd) {
-        alert("Break 1 End Time cannot be after Shift End Time.")
-        return
-      }
-
-      if (break2Start && shiftStart && break2Start < shiftStart) {
-        alert("Break 2 Start Time cannot be before Shift Start Time.")
-        return
-      }
-
-      if (break2End && shiftEnd && break2End > shiftEnd) {
-        alert("Break 2 End Time cannot be after Shift End Time.")
-        return
-      }
-      // Removed break3 validation
-    }
-
     if (shiftTimesLocked && (verified || corrected)) {
       const dateStr = format(selectedDate, "yyyy-MM-dd")
       const verification: ShiftVerification = {
@@ -1309,7 +912,6 @@ function BreakEntryForm({
       break1End,
       break2Start,
       break2End,
-      // Removed break3 fields
       coverageEmployeeId,
       coverage2EmployeeId,
       outsideTherapyStart,
@@ -1325,7 +927,6 @@ function BreakEntryForm({
     setBreak1End("")
     setBreak2Start("")
     setBreak2End("")
-    // Removed break3 reset
     setCoverageEmployeeId("")
     setCoverage2EmployeeId("")
     setOutsideTherapyStart("")
