@@ -15,7 +15,7 @@ import {
   exportDailyReportCSV,
   exportMonthlyReportCSV,
 } from "@/lib/report-generator"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/dynamic-chart"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart } from "recharts"
 
 interface AdminReportsProps {

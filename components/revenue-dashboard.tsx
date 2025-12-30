@@ -16,7 +16,7 @@ import {
   exportRevenueReport,
 } from "@/lib/revenue-analytics"
 import { loadComplianceSettings } from "@/lib/compliance-storage"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/dynamic-chart"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Pie, PieChart, Cell } from "recharts"
 
 interface RevenueDashboardProps {
