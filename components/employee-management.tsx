@@ -35,6 +35,7 @@ export default function EmployeeManagement({
   onAddBreakEntry,
   onUpdateBreakEntry,
 }: EmployeeManagementProps) {
+  const [mounted, setMounted] = useState(false)
   const [canManage, setCanManage] = useState(false)
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
@@ -48,8 +49,16 @@ export default function EmployeeManagement({
   })
 
   useEffect(() => {
-    setCanManage(canManageEmployees())
+    setMounted(true)
+    // Only check permissions after mounting to avoid SSR issues
+    if (typeof window !== "undefined") {
+      setCanManage(canManageEmployees())
+    }
   }, [])
+
+  if (!mounted) {
+    return null
+  }
 
   const handleAddEmployee = () => {
     if (!canManage) {
