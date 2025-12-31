@@ -143,6 +143,16 @@ export function getPermissions(role: AdminRole): AdminPermissions {
         manageUsers: true,
         exportData: true,
       }
+    default:
+      console.warn("[v0] Unknown role:", role)
+      return {
+        viewReports: false,
+        editEmployees: false,
+        configureSettings: false,
+        accessAuditTrail: false,
+        manageUsers: false,
+        exportData: false,
+      }
   }
 }
 
@@ -179,9 +189,21 @@ export function isDirector(): boolean {
 
 export function canManageEmployees(): boolean {
   const session = getAdminSession()
-  if (!session) return false
+  if (!session) {
+    console.log("[v0] canManageEmployees: No session found")
+    return false
+  }
 
-  const permissions = getPermissions(session.role as AdminRole)
+  const role = session.role as AdminRole
+  console.log("[v0] canManageEmployees: Checking role", role)
+
+  const permissions = getPermissions(role)
+  if (!permissions) {
+    console.warn("[v0] canManageEmployees: No permissions found for role", role)
+    return false
+  }
+
+  console.log("[v0] canManageEmployees: editEmployees =", permissions.editEmployees)
   return permissions.editEmployees
 }
 
