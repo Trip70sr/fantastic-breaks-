@@ -16,7 +16,7 @@ function simpleHash(password: string): string {
   return hash.toString(36)
 }
 
-export type AdminRole = "manager" | "hr_admin" | "super_admin" | "director"
+export type AdminRole = "manager" | "hr_admin" | "admin" | "director"
 
 export interface AdminPermissions {
   viewReports: boolean
@@ -36,7 +36,7 @@ export function initializeAdminAccount(): void {
     const defaultAdmin: AdminCredentials = {
       username: "admin",
       passwordHash: simpleHash("admin123"),
-      role: "super_admin",
+      role: "admin",
       createdAt: new Date().toISOString(),
     }
     localStorage.setItem(ADMIN_CREDENTIALS_KEY, JSON.stringify([defaultAdmin]))
@@ -134,7 +134,7 @@ export function getPermissions(role: AdminRole): AdminPermissions {
         manageUsers: false,
         exportData: true,
       }
-    case "super_admin":
+    case "admin":
       return {
         viewReports: true,
         editEmployees: true,
@@ -174,7 +174,7 @@ export function changeAdminPassword(username: string, oldPassword: string, newPa
 
 export function isDirector(): boolean {
   const session = getAdminSession()
-  return session?.role === "director" || session?.role === "super_admin"
+  return session?.role === "director" || session?.role === "admin"
 }
 
 export function canManageEmployees(): boolean {
@@ -189,6 +189,6 @@ export function isManagementRole(): boolean {
   const session = getAdminSession()
   if (!session) return false
 
-  const managementRoles: AdminRole[] = ["manager", "hr_admin", "super_admin", "director"]
+  const managementRoles: AdminRole[] = ["manager", "hr_admin", "admin", "director"]
   return managementRoles.includes(session.role as AdminRole)
 }

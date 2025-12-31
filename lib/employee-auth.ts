@@ -150,7 +150,7 @@ export function isManager(): boolean {
 
 export function isAdminRole(): boolean {
   const session = getUserSession()
-  return session?.role === "hr_admin" || session?.role === "super_admin" || session?.role === "director"
+  return session?.role === "hr_admin" || session?.role === "admin" || session?.role === "director"
 }
 
 export function canAddEmployees(): boolean {

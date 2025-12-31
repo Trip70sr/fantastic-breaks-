@@ -23,7 +23,7 @@ export interface BreakEntry {
 export interface AdminCredentials {
   username: string
   passwordHash: string
-  role: "super_admin" | "admin" | "director" // Added director role
+  role: "admin" | "director" // Changed super_admin to admin
   createdAt: string
   lastLogin?: string
 }
@@ -120,7 +120,7 @@ export interface EmployeeCredentials {
 export interface UserSession {
   userId: string
   username: string
-  role: "employee" | "manager" | "hr_admin" | "super_admin" | "director"
+  role: "employee" | "manager" | "hr_admin" | "admin" | "director" // Changed super_admin to admin
   employeeId?: string // for employee users
   loginTime: number
 }

@@ -17,8 +17,7 @@ export function middleware(request: NextRequest) {
     try {
       const session = JSON.parse(sessionHeader)
 
-      // Only managers, hr_admin, super_admin, and director can access
-      const allowedRoles = ["manager", "hr_admin", "super_admin", "director"]
+      const allowedRoles = ["manager", "hr_admin", "admin", "director"]
 
       if (!allowedRoles.includes(session.role)) {
         return NextResponse.redirect(new URL("/unauthorized", request.url))

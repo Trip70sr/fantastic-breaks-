@@ -7,7 +7,7 @@ export interface AuditEntry {
   timestamp: string
   action: "break_start" | "break_end" | "violation_detected" | "manual_edit" | "report_generated" | "settings_changed"
   actor: string // employee or admin username
-  actorRole: "employee" | "manager" | "hr_admin" | "super_admin"
+  actorRole: "employee" | "manager" | "hr_admin" | "admin" // Changed super_admin to admin
   details: {
     employeeId?: string
     employeeName?: string
@@ -218,7 +218,7 @@ function mapToAuditAction(action: string): AuditEntry["action"] {
 
 function determineActorRole(actor: string): AuditEntry["actorRole"] {
   // Default to manager for now, can be enhanced with actual role detection
-  if (actor === "super_admin") return "super_admin"
+  if (actor === "admin") return "admin" // Changed super_admin to admin
   if (actor === "hr_admin") return "hr_admin"
   if (actor === "manager") return "manager"
   return "employee"
