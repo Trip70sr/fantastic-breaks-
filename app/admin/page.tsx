@@ -23,6 +23,7 @@ export default function AdminPage() {
   const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
   const [violations, setViolations] = useState<any[]>([])
   const [session, setSession] = useState<any>(null)
+  const [showEmployeeManager, setShowEmployeeManager] = useState(false)
 
   useEffect(() => {
     if (!isAdminAuthenticated()) {
@@ -114,17 +115,40 @@ export default function AdminPage() {
             </TabsList>
 
             <TabsContent value="employees">
-              <EmployeeManagement
-                isOpen={true}
-                onClose={() => {}}
-                employees={employees}
-                breakEntries={breakEntries}
-                onAddEmployee={handleAddEmployee}
-                onUpdateEmployee={handleUpdateEmployee}
-                onDeleteEmployee={handleDeleteEmployee}
-                onAddBreakEntry={handleAddBreakEntry}
-                onUpdateBreakEntry={handleUpdateBreakEntry}
-              />
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold">Employee Management</h2>
+                    <p className="text-gray-600">View and manage your team members</p>
+                  </div>
+                  <Button onClick={() => setShowEmployeeManager(true)}>Manage Employees</Button>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Department</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {employees.map((employee) => (
+                        <tr key={employee.id} className="border-t">
+                          <td className="px-4 py-3">{employee.name}</td>
+                          <td className="px-4 py-3">{employee.department}</td>
+                          <td className="px-4 py-3">
+                            <span className={employee.active ? "text-green-600" : "text-red-600"}>
+                              {employee.active ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="compliance">
@@ -148,6 +172,18 @@ export default function AdminPage() {
             </TabsContent>
           </Tabs>
         </AdminAnalyticsLayout>
+
+        <EmployeeManagement
+          isOpen={showEmployeeManager}
+          onClose={() => setShowEmployeeManager(false)}
+          employees={employees}
+          breakEntries={breakEntries}
+          onAddEmployee={handleAddEmployee}
+          onUpdateEmployee={handleUpdateEmployee}
+          onDeleteEmployee={handleDeleteEmployee}
+          onAddBreakEntry={handleAddBreakEntry}
+          onUpdateBreakEntry={handleUpdateBreakEntry}
+        />
       </div>
     </div>
   )
