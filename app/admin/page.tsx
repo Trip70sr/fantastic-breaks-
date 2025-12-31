@@ -105,14 +105,18 @@ export default function AdminPage() {
 
         <AdminAnalyticsLayout>
           <Tabs defaultValue="employees" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="employees">Employees</TabsTrigger>
-              <TabsTrigger value="compliance">Compliance</TabsTrigger>
-              <TabsTrigger value="revenue">Revenue</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
+            <div className="space-y-2">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="employees">Employees</TabsTrigger>
+                <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                <TabsTrigger value="revenue">Revenue</TabsTrigger>
+              </TabsList>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="reports">Reports</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="employees">
               <div className="space-y-6">
