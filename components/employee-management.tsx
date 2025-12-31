@@ -8,27 +8,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import type { Employee, BreakEntry, Department } from "@/lib/types"
-import { Edit, Trash2, Plus, Users } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Edit, Trash2, Plus, Users, Filter } from "lucide-react"
 import { canManageEmployees } from "@/lib/admin-auth"
+import type { Employee, BreakEntry, Department } from "@/types"
 
 interface EmployeeManagementProps {
   isOpen: boolean
   onClose: () => void
-  employees: Employee[]
-  breakEntries: BreakEntry[]
+  employees?: Employee[]
+  breakEntries?: BreakEntry[]
   onAddEmployee: (employee: Employee) => void
   onUpdateEmployee: (employee: Employee) => void
   onDeleteEmployee: (id: string) => void
-  onAddBreakEntry: (entry: BreakEntry) => void
-  onUpdateBreakEntry: (entry: BreakEntry) => void
+  onAddBreakEntry: (breakEntry: BreakEntry) => void
+  onUpdateBreakEntry: (breakEntry: BreakEntry) => void
 }
 
 export default function EmployeeManagement({
   isOpen,
   onClose,
-  employees = [], // Add default empty array
-  breakEntries = [], // Add default empty array
+  employees = [],
+  breakEntries = [],
   onAddEmployee,
   onUpdateEmployee,
   onDeleteEmployee,
@@ -42,15 +43,16 @@ export default function EmployeeManagement({
   const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active")
 
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     department: "RBT" as Department,
+    active: true,
   })
 
   useEffect(() => {
     setMounted(true)
-    // Only check permissions after mounting to avoid SSR issues
     if (typeof window !== "undefined") {
       setCanManage(canManageEmployees())
     }
@@ -71,10 +73,10 @@ export default function EmployeeManagement({
         id: Date.now().toString(),
         name: newEmployee.name.trim(),
         department: newEmployee.department,
-        active: true,
+        active: newEmployee.active,
         hourlyRate: 0,
       })
-      setNewEmployee({ name: "", department: "RBT" })
+      setNewEmployee({ name: "", department: "RBT", active: true })
       setIsAddEmployeeOpen(false)
     }
   }
@@ -134,6 +136,11 @@ export default function EmployeeManagement({
   if (!isOpen) return null
 
   const safeEmployees = employees || []
+  const filteredEmployees = safeEmployees.filter((emp) => {
+    if (statusFilter === "active") return emp.active !== false
+    if (statusFilter === "inactive") return emp.active === false
+    return true
+  })
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -148,7 +155,10 @@ export default function EmployeeManagement({
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-lg font-semibold">Employees ({safeEmployees.length})</h3>
+              <h3 className="text-lg font-semibold">
+                Employees ({filteredEmployees.length}
+                {statusFilter !== "all" && ` of ${safeEmployees.length}`})
+              </h3>
               <p className="text-sm text-gray-600">Manage your team members and their departments</p>
               {!canManage && (
                 <p className="text-sm text-red-600 mt-1">
@@ -156,14 +166,29 @@ export default function EmployeeManagement({
                 </p>
               )}
             </div>
-            <Button
-              onClick={() => setIsAddEmployeeOpen(true)}
-              className="flex items-center gap-2"
-              disabled={!canManage}
-            >
-              <Plus className="h-4 w-4" />
-              Add Employee
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Employees</SelectItem>
+                    <SelectItem value="active">Active Only</SelectItem>
+                    <SelectItem value="inactive">Inactive Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={() => setIsAddEmployeeOpen(true)}
+                className="flex items-center gap-2"
+                disabled={!canManage}
+              >
+                <Plus className="h-4 w-4" />
+                Add Employee
+              </Button>
+            </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -171,6 +196,7 @@ export default function EmployeeManagement({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Total Shifts</TableHead>
                   <TableHead>Shifts with Breaks</TableHead>
@@ -179,11 +205,22 @@ export default function EmployeeManagement({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {safeEmployees.map((employee) => {
+                {filteredEmployees.map((employee) => {
                   const stats = getEmployeeStats(employee.id)
                   return (
                     <TableRow key={employee.id}>
                       <TableCell className="font-medium">{employee.name}</TableCell>
+                      <TableCell>
+                        {employee.active === false ? (
+                          <Badge variant="secondary" className="bg-gray-200 text-gray-700">
+                            Inactive
+                          </Badge>
+                        ) : (
+                          <Badge variant="default" className="bg-green-100 text-green-800">
+                            Active
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{employee.department}</Badge>
                       </TableCell>
@@ -217,9 +254,15 @@ export default function EmployeeManagement({
             </Table>
           </div>
 
-          {safeEmployees.length === 0 && (
+          {filteredEmployees.length === 0 && (
             <div className="text-center py-8 border rounded-lg bg-gray-50">
-              <p className="text-gray-500">No employees found. Add your first employee to get started.</p>
+              <p className="text-gray-500">
+                {statusFilter === "inactive"
+                  ? "No inactive employees found."
+                  : statusFilter === "active"
+                    ? "No active employees found. Add your first employee to get started."
+                    : "No employees found. Add your first employee to get started."}
+              </p>
             </div>
           )}
         </div>
@@ -231,7 +274,6 @@ export default function EmployeeManagement({
         </DialogFooter>
       </DialogContent>
 
-      {/* Add Employee Dialog */}
       <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
         <DialogContent>
           <DialogHeader>
@@ -264,6 +306,19 @@ export default function EmployeeManagement({
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="new-employee-active"
+                checked={newEmployee.active}
+                onCheckedChange={(checked) => setNewEmployee({ ...newEmployee, active: checked as boolean })}
+              />
+              <Label
+                htmlFor="new-employee-active"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Active Employee
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -276,7 +331,6 @@ export default function EmployeeManagement({
         </DialogContent>
       </Dialog>
 
-      {/* Edit Employee Dialog */}
       <Dialog open={isEditEmployeeOpen} onOpenChange={setIsEditEmployeeOpen}>
         <DialogContent>
           <DialogHeader>
@@ -310,6 +364,22 @@ export default function EmployeeManagement({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-employee-active"
+                  checked={editingEmployee.active !== false}
+                  onCheckedChange={(checked) => setEditingEmployee({ ...editingEmployee, active: checked as boolean })}
+                />
+                <Label
+                  htmlFor="edit-employee-active"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Active Employee
+                </Label>
+              </div>
+              <p className="text-xs text-gray-500">
+                Inactive employees will not appear in daily break lists and cannot log in to the employee dashboard.
+              </p>
             </div>
           )}
           <DialogFooter>
@@ -323,7 +393,6 @@ export default function EmployeeManagement({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>

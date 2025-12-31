@@ -12,6 +12,8 @@ export const initialEmployees: Employee[] = [
     department: "Customer Service",
     shift: "Morning",
     email: "sarah.j@company.com",
+    active: true,
+    hourlyRate: 0,
   },
   {
     id: "2",
@@ -19,6 +21,8 @@ export const initialEmployees: Employee[] = [
     department: "Sales",
     shift: "Afternoon",
     email: "michael.c@company.com",
+    active: true,
+    hourlyRate: 0,
   },
   {
     id: "3",
@@ -26,6 +30,8 @@ export const initialEmployees: Employee[] = [
     department: "Customer Service",
     shift: "Evening",
     email: "emily.r@company.com",
+    active: true,
+    hourlyRate: 0,
   },
   {
     id: "4",
@@ -33,6 +39,8 @@ export const initialEmployees: Employee[] = [
     department: "Tech Support",
     shift: "Morning",
     email: "david.k@company.com",
+    active: true,
+    hourlyRate: 0,
   },
   {
     id: "5",
@@ -40,6 +48,8 @@ export const initialEmployees: Employee[] = [
     department: "Sales",
     shift: "Afternoon",
     email: "jessica.t@company.com",
+    active: true,
+    hourlyRate: 0,
   },
 ]
 
