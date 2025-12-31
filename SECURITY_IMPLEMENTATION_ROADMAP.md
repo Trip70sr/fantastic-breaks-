@@ -121,7 +121,7 @@ CREATE POLICY "Managers can manage employees"
   ON employees
   FOR ALL
   USING (
-    auth.jwt() ->> 'role' IN ('manager', 'hr_admin', 'super_admin', 'director')
+    auth.jwt() ->> 'role' IN ('manager', 'hr_admin', 'admin', 'director')
   );
 
 -- Everyone can read employees
@@ -140,7 +140,7 @@ CREATE POLICY "Admins can read audit trail"
   ON audit_trail
   FOR SELECT
   USING (
-    auth.jwt() ->> 'role' IN ('hr_admin', 'super_admin', 'director')
+    auth.jwt() ->> 'role' IN ('hr_admin', 'admin', 'director')
   );
 ```
 
@@ -171,7 +171,7 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/admin/employees')) {
     const userRole = session?.user?.user_metadata?.role
 
-    if (!['manager', 'hr_admin', 'super_admin', 'director'].includes(userRole)) {
+    if (!['manager', 'hr_admin', 'admin', 'director'].includes(userRole)) {
       return NextResponse.redirect(new URL('/unauthorized', req.url))
     }
   }
@@ -395,7 +395,7 @@ async function getManagementEmails(): Promise<string[]> {
   const { data } = await supabase
     .from('users')
     .select('email')
-    .in('role', ['manager', 'hr_admin', 'super_admin', 'director'])
+    .in('role', ['manager', 'hr_admin', 'admin', 'director'])
     .eq('notifications_enabled', true)
 
   return data?.map(u => u.email) || []
@@ -476,17 +476,17 @@ CREATE TRIGGER audit_immutable
   BEFORE UPDATE OR DELETE ON audit_trail
   FOR EACH ROW EXECUTE FUNCTION prevent_audit_modification();
 
--- Policy: Anyone can append, only super_admin can read all
+-- Policy: Anyone can append, only admin can read all
 CREATE POLICY "Append only audit trail"
   ON audit_trail
   FOR INSERT
   WITH CHECK (true);
 
-CREATE POLICY "Super admin can read all audits"
+CREATE POLICY "Admin can read all audits"
   ON audit_trail
   FOR SELECT
   USING (
-    (auth.jwt() ->> 'role') = 'super_admin'
+    (auth.jwt() ->> 'role') = 'admin'
     OR
     actor_id = auth.uid() -- Users can see their own actions
   );

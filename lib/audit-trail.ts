@@ -218,7 +218,7 @@ function mapToAuditAction(action: string): AuditEntry["action"] {
 
 function determineActorRole(actor: string): AuditEntry["actorRole"] {
   // Default to manager for now, can be enhanced with actual role detection
-  if (actor === "admin") return "admin" // Changed super_admin to admin
+  if (actor === "admin") return "admin"
   if (actor === "hr_admin") return "hr_admin"
   if (actor === "manager") return "manager"
   return "employee"
