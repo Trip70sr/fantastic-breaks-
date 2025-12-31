@@ -27,8 +27,8 @@ interface EmployeeManagementProps {
 export default function EmployeeManagement({
   isOpen,
   onClose,
-  employees,
-  breakEntries,
+  employees = [], // Add default empty array
+  breakEntries = [], // Add default empty array
   onAddEmployee,
   onUpdateEmployee,
   onDeleteEmployee,
@@ -107,10 +107,11 @@ export default function EmployeeManagement({
   }
 
   const getEmployeeStats = (employeeId: string) => {
-    const employeeEntries = breakEntries.filter((entry) => entry.employeeId === employeeId)
+    const safeBreakEntries = breakEntries || []
+    const employeeEntries = safeBreakEntries.filter((entry) => entry.employeeId === employeeId)
     const totalShifts = employeeEntries.length
     const shiftsWithBreaks = employeeEntries.filter((entry) => entry.break1Start && entry.break1End).length
-    const coverageProvided = breakEntries.filter(
+    const coverageProvided = safeBreakEntries.filter(
       (entry) => entry.coverageEmployeeId === employeeId || entry.coverage2EmployeeId === employeeId,
     ).length
 
@@ -122,6 +123,8 @@ export default function EmployeeManagement({
   }
 
   if (!isOpen) return null
+
+  const safeEmployees = employees || []
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -136,7 +139,7 @@ export default function EmployeeManagement({
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-lg font-semibold">Employees ({employees.length})</h3>
+              <h3 className="text-lg font-semibold">Employees ({safeEmployees.length})</h3>
               <p className="text-sm text-gray-600">Manage your team members and their departments</p>
               {!canManage && (
                 <p className="text-sm text-red-600 mt-1">
@@ -167,7 +170,7 @@ export default function EmployeeManagement({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.map((employee) => {
+                {safeEmployees.map((employee) => {
                   const stats = getEmployeeStats(employee.id)
                   return (
                     <TableRow key={employee.id}>
@@ -205,7 +208,7 @@ export default function EmployeeManagement({
             </Table>
           </div>
 
-          {employees.length === 0 && (
+          {safeEmployees.length === 0 && (
             <div className="text-center py-8 border rounded-lg bg-gray-50">
               <p className="text-gray-500">No employees found. Add your first employee to get started.</p>
             </div>
