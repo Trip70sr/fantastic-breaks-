@@ -13,13 +13,14 @@ import AdminReports from "@/components/admin-reports"
 import NotificationSettings from "@/components/notification-settings"
 import NotificationHistory from "@/components/notification-history"
 import EmployeeManagement from "@/components/employee-management"
-import { loadBreakEntries, loadEmployees } from "@/lib/data"
+import { loadBreakEntries, loadEmployees, saveEmployees, saveBreakEntries } from "@/lib/data"
 import { loadViolations } from "@/lib/compliance-storage"
+import type { Employee, BreakEntry } from "@/lib/types"
 
 export default function AdminPage() {
   const router = useRouter()
-  const [employees, setEmployees] = useState<any[]>([])
-  const [breakEntries, setBreakEntries] = useState<any[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [breakEntries, setBreakEntries] = useState<BreakEntry[]>([])
   const [violations, setViolations] = useState<any[]>([])
   const [session, setSession] = useState<any>(null)
 
@@ -44,6 +45,41 @@ export default function AdminPage() {
     setEmployees(loadEmployees())
     setBreakEntries(loadBreakEntries())
     setViolations(loadViolations())
+  }
+
+  const handleAddEmployee = (employee: Employee) => {
+    const updatedEmployees = [...employees, employee]
+    setEmployees(updatedEmployees)
+    saveEmployees(updatedEmployees)
+  }
+
+  const handleUpdateEmployee = (employee: Employee) => {
+    const updatedEmployees = employees.map((e) => (e.id === employee.id ? employee : e))
+    setEmployees(updatedEmployees)
+    saveEmployees(updatedEmployees)
+  }
+
+  const handleDeleteEmployee = (id: string) => {
+    const updatedEmployees = employees.filter((e) => e.id !== id)
+    setEmployees(updatedEmployees)
+    saveEmployees(updatedEmployees)
+
+    // Also remove break entries for this employee
+    const updatedEntries = breakEntries.filter((e) => e.employeeId !== id)
+    setBreakEntries(updatedEntries)
+    saveBreakEntries(updatedEntries)
+  }
+
+  const handleAddBreakEntry = (entry: BreakEntry) => {
+    const updatedEntries = [...breakEntries, entry]
+    setBreakEntries(updatedEntries)
+    saveBreakEntries(updatedEntries)
+  }
+
+  const handleUpdateBreakEntry = (entry: BreakEntry) => {
+    const updatedEntries = breakEntries.map((e) => (e.id === entry.id ? entry : e))
+    setBreakEntries(updatedEntries)
+    saveBreakEntries(updatedEntries)
   }
 
   if (!session) {
@@ -78,7 +114,17 @@ export default function AdminPage() {
             </TabsList>
 
             <TabsContent value="employees">
-              <EmployeeManagement isOpen={true} onClose={() => {}} onUpdate={handleRefreshData} />
+              <EmployeeManagement
+                isOpen={true}
+                onClose={() => {}}
+                employees={employees}
+                breakEntries={breakEntries}
+                onAddEmployee={handleAddEmployee}
+                onUpdateEmployee={handleUpdateEmployee}
+                onDeleteEmployee={handleDeleteEmployee}
+                onAddBreakEntry={handleAddBreakEntry}
+                onUpdateBreakEntry={handleUpdateBreakEntry}
+              />
             </TabsContent>
 
             <TabsContent value="compliance">
