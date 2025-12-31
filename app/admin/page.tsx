@@ -12,6 +12,7 @@ import AdminReports from "@/components/admin-reports"
 import NotificationSettings from "@/components/notification-settings"
 import NotificationHistory from "@/components/notification-history"
 import EmployeeManagement from "@/components/employee-management"
+import DailyBreakListCreator from "@/components/daily-break-list-creator"
 import { loadBreakEntries, loadEmployees, saveEmployees, saveBreakEntries } from "@/lib/data"
 import { loadViolations } from "@/lib/compliance-storage"
 import type { Employee, BreakEntry } from "@/lib/types"
@@ -106,6 +107,8 @@ export default function AdminPage() {
 
             <TabsContent value="employees">
               <div className="space-y-6">
+                <DailyBreakListCreator employees={employees} onUpdate={handleRefreshData} />
+
                 <div className="flex justify-between items-center">
                   <div>
                     <h2 className="text-2xl font-bold">Employee Management</h2>

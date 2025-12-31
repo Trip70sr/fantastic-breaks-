@@ -13,6 +13,7 @@ import { LogOut, Clock, Users } from "lucide-react"
 import { format } from "date-fns"
 import type { ShiftScheduleEntry } from "@/lib/types"
 import EmployeeBreakDashboard from "@/components/employee-break-dashboard"
+import EmployeeBreakListView from "@/components/employee-break-list-view"
 
 export default function EmployeeDashboardPage() {
   const router = useRouter()
@@ -85,6 +86,8 @@ export default function EmployeeDashboardPage() {
         </div>
 
         <div className="grid gap-6 mb-8">
+          <EmployeeBreakListView />
+
           {session.role === "manager" && (
             <Card>
               <CardHeader>
