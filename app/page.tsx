@@ -1,41 +1,30 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import EmployeeBreakDashboard from "@/components/employee-break-dashboard"
-import PrivacyBanner from "@/components/privacy-banner"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { isAuthenticated } from "@/lib/employee-auth"
+import { isAdminAuthenticated } from "@/lib/admin-auth"
 
 export default function Home() {
-  const [showPrivacyBanner, setShowPrivacyBanner] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
-    const consent = localStorage.getItem("privacy-consent")
-    if (!consent) {
-      setShowPrivacyBanner(true)
+    // Check if user is already authenticated
+    if (isAdminAuthenticated()) {
+      router.push("/admin")
+    } else if (isAuthenticated()) {
+      router.push("/employee-dashboard")
+    } else {
+      router.push("/login")
     }
-  }, [])
-
-  const handleAcceptPrivacy = () => {
-    setShowPrivacyBanner(false)
-    localStorage.setItem("privacy-consent", "accepted")
-  }
-
-  const handleDeclinePrivacy = () => {
-    setShowPrivacyBanner(false)
-    localStorage.setItem("privacy-consent", "declined")
-  }
+  }, [router])
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-aquamarine-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-blue-900 mb-2">Employee Break Protocol</h1>
-          <p className="text-lg text-blue-700">Streamline break scheduling and compliance tracking</p>
-        </div>
-
-        <EmployeeBreakDashboard />
-
-        {showPrivacyBanner && <PrivacyBanner onAccept={handleAcceptPrivacy} onDecline={handleDeclinePrivacy} />}
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900 mx-auto"></div>
+        <p className="mt-4 text-blue-700">Loading...</p>
       </div>
-    </main>
+    </div>
   )
 }

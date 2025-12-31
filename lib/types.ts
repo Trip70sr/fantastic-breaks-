@@ -107,3 +107,20 @@ export interface BreakWaiver {
   status: "pending" | "approved" | "denied"
   reason?: string // employee's reason for waiving
 }
+
+export interface EmployeeCredentials {
+  employeeId: string
+  username: string
+  passwordHash: string
+  role: "employee" | "manager"
+  createdAt: string
+  lastLogin?: string
+}
+
+export interface UserSession {
+  userId: string
+  username: string
+  role: "employee" | "manager" | "hr_admin" | "super_admin" | "director"
+  employeeId?: string // for employee users
+  loginTime: number
+}
