@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LogOut } from "lucide-react"
 import { isAdminAuthenticated, logoutAdmin, getAdminSession } from "@/lib/admin-auth"
 import AdminAnalyticsLayout from "@/components/admin-analytics-layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -90,19 +89,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-blue-900 mb-2">Admin Dashboard</h1>
-            <p className="text-lg text-blue-700">
-              Welcome, {session.username} ({session.role})
-            </p>
-          </div>
-          <Button onClick={handleLogout} variant="outline">
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-
         <AdminAnalyticsLayout>
           <Tabs defaultValue="employees" className="space-y-6">
             <div className="space-y-2">

@@ -27,8 +27,43 @@ export interface AdminPermissions {
   exportData: boolean
 }
 
+function migrateOldRoles(): void {
+  if (typeof window === "undefined") return
+
+  // Migrate credentials
+  const credentialsData = localStorage.getItem(ADMIN_CREDENTIALS_KEY)
+  if (credentialsData) {
+    try {
+      const credentials = JSON.parse(credentialsData)
+      const updated = credentials.map((cred: any) => ({
+        ...cred,
+        role: cred.role === "super_admin" ? "admin" : cred.role,
+      }))
+      localStorage.setItem(ADMIN_CREDENTIALS_KEY, JSON.stringify(updated))
+    } catch (e) {
+      console.error("Failed to migrate credentials:", e)
+    }
+  }
+
+  // Migrate active session
+  const sessionData = localStorage.getItem(ADMIN_SESSION_KEY)
+  if (sessionData) {
+    try {
+      const session = JSON.parse(sessionData)
+      if (session.role === "super_admin") {
+        session.role = "admin"
+        localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session))
+      }
+    } catch (e) {
+      console.error("Failed to migrate session:", e)
+    }
+  }
+}
+
 export function initializeAdminAccount(): void {
   if (typeof window === "undefined") return
+
+  migrateOldRoles()
 
   const existing = localStorage.getItem(ADMIN_CREDENTIALS_KEY)
   if (!existing) {
@@ -190,20 +225,15 @@ export function isDirector(): boolean {
 export function canManageEmployees(): boolean {
   const session = getAdminSession()
   if (!session) {
-    console.log("[v0] canManageEmployees: No session found")
     return false
   }
 
   const role = session.role as AdminRole
-  console.log("[v0] canManageEmployees: Checking role", role)
-
   const permissions = getPermissions(role)
   if (!permissions) {
-    console.warn("[v0] canManageEmployees: No permissions found for role", role)
     return false
   }
 
-  console.log("[v0] canManageEmployees: editEmployees =", permissions.editEmployees)
   return permissions.editEmployees
 }
 
