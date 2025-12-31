@@ -10,12 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Shield, Users } from "lucide-react"
-import {
-  initializeEmployeeAccounts,
-  initializeAdminAccount,
-  authenticateEmployee,
-  authenticateAdmin,
-} from "@/utils/auth"
+import { initializeAdminAccount, authenticateAdmin } from "@/lib/admin-auth"
+import { initializeEmployeeAccounts, authenticateEmployee } from "@/lib/employee-auth"
 
 export default function LoginPage() {
   const router = useRouter()

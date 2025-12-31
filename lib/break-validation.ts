@@ -8,6 +8,134 @@ export interface BreakValidationResult {
   breakType?: BreakType
 }
 
+export interface ValidationResult {
+  isValid: boolean
+  message: string
+}
+
+/**
+ * Validates a complete break entry with shift times and break times
+ * Used by the employee break list view component
+ */
+export function validateBreakEntry(
+  employeeId: string,
+  date: string,
+  shiftStart: string,
+  shiftEnd: string,
+  break1Start?: string,
+  break1End?: string,
+  break2Start?: string,
+  break2End?: string,
+  existingBreaks?: BreakEntry[],
+): ValidationResult {
+  // Validate shift times
+  if (!shiftStart || !shiftEnd) {
+    return {
+      isValid: false,
+      message: "Shift start and end times are required.",
+    }
+  }
+
+  // Calculate shift duration
+  const start = new Date(`1970-01-01T${shiftStart}`)
+  const end = new Date(`1970-01-01T${shiftEnd}`)
+  const shiftHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+
+  if (shiftHours < 0) {
+    return {
+      isValid: false,
+      message: "End time must be after start time.",
+    }
+  }
+
+  // Validate first break if provided
+  if (break1Start && break1End) {
+    const break1StartTime = new Date(`1970-01-01T${break1Start}`)
+    const break1EndTime = new Date(`1970-01-01T${break1End}`)
+
+    if (break1EndTime <= break1StartTime) {
+      return {
+        isValid: false,
+        message: "First break end time must be after start time.",
+      }
+    }
+
+    // Check if first break is already recorded for this employee today
+    if (existingBreaks) {
+      const hasFirstBreak = existingBreaks.some(
+        (entry) =>
+          entry.employeeId === employeeId &&
+          entry.date === date &&
+          entry.break1Start &&
+          entry.break1End &&
+          entry.id !== `${employeeId}-${date}-${Date.now()}`, // Exclude current entry
+      )
+
+      if (hasFirstBreak) {
+        return {
+          isValid: false,
+          message: "This employee has already had the first break today. Please give another employee a break.",
+        }
+      }
+    }
+  }
+
+  // Validate second break if provided
+  if (break2Start && break2End) {
+    const break2StartTime = new Date(`1970-01-01T${break2Start}`)
+    const break2EndTime = new Date(`1970-01-01T${break2End}`)
+
+    if (break2EndTime <= break2StartTime) {
+      return {
+        isValid: false,
+        message: "Second break end time must be after start time.",
+      }
+    }
+
+    // Check if employee worked 6.5+ hours
+    if (shiftHours < 6.5) {
+      return {
+        isValid: false,
+        message: "Second break is only available if the employee works 6.5 hours or more.",
+      }
+    }
+
+    // Check if first break is completed
+    if (!break1Start || !break1End) {
+      return {
+        isValid: false,
+        message: "This employee must complete their first break before taking a second break.",
+      }
+    }
+
+    // Check if second break is already recorded
+    if (existingBreaks) {
+      const hasSecondBreak = existingBreaks.some(
+        (entry) =>
+          entry.employeeId === employeeId &&
+          entry.date === date &&
+          entry.break2Start &&
+          entry.break2End &&
+          entry.id !== `${employeeId}-${date}-${Date.now()}`,
+      )
+
+      if (hasSecondBreak) {
+        return {
+          isValid: false,
+          message: "This employee has already had their second break today. Please select another employee.",
+        }
+      }
+    }
+  }
+
+  return {
+    isValid: true,
+    message: break2Start
+      ? "Second break recorded successfully. Employee worked 6.5+ hours."
+      : "Break entry validated successfully.",
+  }
+}
+
 /**
  * Validates if a break can be assigned to an employee
  * Enforces Colorado break laws and prevents duplicate breaks
